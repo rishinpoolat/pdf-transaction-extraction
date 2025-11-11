@@ -8,10 +8,13 @@ export const bodyValidation = (schema: ZodSchema) => {
       schema.parse(req.body);
       next();
     } catch (err: any) {
-      const errors = err.errors?.map((e: any) => ({
-        path: e.path.join('.'),
-        message: e.message,
-      }));
+      // Zod validation errors
+      const errors = err.issues?.map((issue: any) => ({
+        field: issue.path.join('.') || 'body',
+        message: issue.message,
+      })) || [];
+
+      // Pass error to global error handler with detailed validation errors
       next(
         errorHandler(
           httpErrorCodes.VALIDATION,

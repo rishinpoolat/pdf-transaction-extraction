@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 interface EmailOptions {
   email: string;
@@ -6,26 +6,23 @@ interface EmailOptions {
   message: string;
 }
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 export const sendEmail = async ({ email, subject, message }: EmailOptions): Promise<void> => {
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      secure: true,
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-
-    const mailOptions = {
-      from: `PDF Transactions <${process.env.EMAIL}>`,
+    const { data, error } = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
       to: email,
       subject: subject,
       html: message,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    if (error) {
+      console.error('Error sending email:', error);
+      throw error;
+    }
+
+    console.log('Email sent successfully:', data?.id);
   } catch (error) {
     console.error('Error sending email:', error);
     throw error;
