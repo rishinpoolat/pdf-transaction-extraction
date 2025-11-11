@@ -27,8 +27,6 @@
     "nodemailer": "^7.0.10",
     "postgres": "^3.4.7",
     "speakeasy": "^2.0.0",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -40,8 +38,6 @@
     "@types/node": "^24.10.0",
     "@types/nodemailer": "^7.0.3",
     "@types/speakeasy": "^2.0.10",
-    "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8",
     "drizzle-kit": "^0.31.6",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

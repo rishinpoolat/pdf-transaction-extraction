@@ -7,11 +7,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import swaggerUi from 'swagger-ui-express';
 import { testConnection, closeConnection } from './db';
 import routes from './routes';
 import { CustomError, errorHandler, httpErrorCodes } from './utils/error';
-import { swaggerSpec } from './config/swagger';
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SECRET', 'PORT'];
@@ -54,33 +52,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'PDF Transaction API Docs',
-}));
-
-// Swagger JSON endpoint
-app.get('/api-docs.json', (_req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
-
-/**
- * @swagger
- * /health:
- *   get:
- *     summary: Health check endpoint
- *     description: Returns the health status of the API
- *     tags: [Health]
- *     responses:
- *       200:
- *         description: API is healthy
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HealthResponse'
- */
+// Health check route
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
