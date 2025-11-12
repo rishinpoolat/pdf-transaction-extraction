@@ -10,8 +10,8 @@ export function LogoutButton() {
   const handleLogout = () => {
     startTransition(async () => {
       try {
-        toast.success("Logging out...");
         await logoutAction();
+        toast.success("Logged out successfully!");
       } catch (error) {
         // NEXT_REDIRECT errors are expected and shouldn't be shown to user
         const errorMessage =
