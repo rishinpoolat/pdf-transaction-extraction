@@ -4,7 +4,13 @@ import { blacklist, NewBlacklistToken } from '../db/schema';
 import { errorHandler, httpErrorCodes } from '../utils/error';
 import { errorMessages } from '../utils/constants';
 import { getToken } from '../utils/jwt';
-import { User } from '../db/schema';
+
+// User type for hardcoded admin
+interface User {
+  id: number;
+  email: string;
+  name: string;
+}
 
 export const findToken = async (token: string): Promise<void> => {
   try {

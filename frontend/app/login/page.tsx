@@ -65,19 +65,23 @@ export default function LoginPage() {
           router.push("/dashboard");
         }, 500);
       }
-    } catch (err: any) {
+    } catch (err) {
       // Show error toast with longer duration
       const errorMessage =
-        err.response?.data?.message || "Invalid credentials. Please try again.";
+        err instanceof Error && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
 
-      toast.error(errorMessage, {
+      const message = errorMessage || "Invalid credentials. Please try again.";
+
+      toast.error(message, {
         duration: 4000,
       });
 
       // Set form error
       setError("root", {
         type: "manual",
-        message: errorMessage,
+        message,
       });
 
       // Re-enable form
