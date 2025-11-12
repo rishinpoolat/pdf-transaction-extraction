@@ -1,10 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { findToken } from '../services/token.services';
-import { getUserByEmail } from '../services/user.services';
 import { errorHandler, httpErrorCodes } from '../utils/error';
 import { verifyToken } from '../utils/jwt';
 import { errorMessages } from '../utils/constants';
-import { User } from '../db/schema';
+
+// User type for hardcoded admin
+interface User {
+  id: number;
+  email: string;
+  name: string;
+}
 
 // Extend Express Request type to include user and token
 declare global {
@@ -35,10 +40,15 @@ export const isAuthenticated = async (
     }
 
     // Check if token is blacklisted
-    try {
-      await findToken(token);
-    } catch (error) {
-      return next(error);
+    const blacklisted = await findToken(token).catch(() => null);
+
+    if (blacklisted) {
+      return next(
+        errorHandler(
+          httpErrorCodes.UNAUTHORIZED,
+          errorMessages.BLACKLIST_TOKEN
+        )
+      );
     }
 
     // Verify token
@@ -54,16 +64,12 @@ export const isAuthenticated = async (
       );
     }
 
-    // Get user from database
-    const user = await getUserByEmail(decodedToken.email);
-    if (!user) {
-      return next(
-        errorHandler(
-          httpErrorCodes.UNAUTHORIZED,
-          errorMessages.USER_NOT_FOUND
-        )
-      );
-    }
+    // Create user object from decoded token (hardcoded admin)
+    const user: User = {
+      id: decodedToken.userId || 1,
+      email: decodedToken.email || 'admin',
+      name: 'Administrator',
+    };
 
     // Attach user and token to request
     req.token = token;
