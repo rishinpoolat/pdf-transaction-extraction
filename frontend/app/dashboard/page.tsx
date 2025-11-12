@@ -1,54 +1,14 @@
-"use client";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { LogoutButton } from "@/components/auth/logout-button";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { useAuthStore } from "@/store/authStore";
-import axiosInstance from "@/lib/axios";
+export default async function DashboardPage() {
+  // Fetch user data server-side
+  const user = await getCurrentUser();
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuthStore();
-
-  // Check authentication on mount
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, router]);
-
-  const handleLogout = async () => {
-    try {
-      // Call logout endpoint to blacklist token
-      await axiosInstance.post("/auth/logout");
-
-      // Show success toast
-      toast.success("Logged out successfully!");
-
-      // Clear local state
-      logout();
-
-      // Redirect to login
-      setTimeout(() => {
-        router.push("/login");
-      }, 500);
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast.error("Logout failed. Clearing session anyway.");
-
-      // Clear local state regardless of API response
-      logout();
-      router.push("/login");
-    }
-  };
-
-  // Show loading state while redirecting or if user data is not available
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    );
+  // Redirect to login if not authenticated (fallback, middleware should handle this)
+  if (!user) {
+    redirect("/login");
   }
 
   return (
@@ -66,12 +26,7 @@ export default function DashboardPage() {
               <span className="text-sm text-gray-700">
                 {user.name} ({user.email})
               </span>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Logout
-              </button>
+              <LogoutButton />
             </div>
           </div>
         </div>
@@ -80,7 +35,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-6 lg:px-8">
         <div className="py-6 px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg p-8">
+          <div className="border-4 border-dashed border-gray-200 rounded-none p-8">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Welcome, {user.name}!
@@ -90,7 +45,7 @@ export default function DashboardPage() {
               </p>
 
               {/* User Info Card */}
-              <div className="max-w-md mx-auto bg-white shadow-md rounded-lg p-6">
+              <div className="max-w-md mx-auto bg-white shadow-md rounded-none p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   User Information
                 </h3>
@@ -115,7 +70,7 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Coming Soon
                 </h3>
-                <div className="bg-gray-100 rounded-lg p-6">
+                <div className="bg-gray-100 rounded-none p-6">
                   <p className="text-gray-600">
                     PDF upload and transaction extraction features will be
                     available here.
