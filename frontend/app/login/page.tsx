@@ -92,84 +92,142 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            PDF Transaction Extraction
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to your account
-          </p>
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-800 via-indigo-900 to-indigo-1000 p-12 flex-col justify-between text-white">
+        {/* Logo */}
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <svg
+              className="w-7 h-7"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <span className="text-2xl font-semibold">Extract</span>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                {...register("email")}
-                id="email"
-                type="text"
-                autoComplete="email"
-                disabled={isLoading}
-                className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
-                  errors.email ? "border-red-500" : "border-gray-300"
-                } placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                placeholder="Email"
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                {...register("password")}
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                disabled={isLoading}
-                className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
-                  errors.password ? "border-red-500" : "border-gray-300"
-                } placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                placeholder="Password"
-              />
-              {errors.password && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-          </div>
+        {/* Main Content */}
+        <div className="space-y-8">
+          <h1 className="text-5xl font-bold leading-tight">
+            PDF
+            <br />
+            Transaction
+            <br />
+            Extraction
+          </h1>
+          <p className="text-lg text-indigo-100 max-w-md">
+            Process financial documents
+          </p>
 
+          {/* Stats */}
+        </div>
+
+        {/* Footer */}
+        <div className="text-indigo-200 text-sm">
+          © 2025 Extract. All rights reserved.
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+        <div className="max-w-md w-full space-y-8">
           <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                isLoading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-            >
-              {isLoading ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
-
-          <div className="text-center text-sm text-gray-500">
-            <p>Test credentials:</p>
-            <p className="font-mono text-xs mt-1">
-              Email: admin | Password: admin123
+            <h2 className="text-4xl font-bold text-indigo-900">Welcome Back</h2>
+            <p className="mt-2 text-base text-gray-500">
+              Sign in to your account to continue
             </p>
           </div>
-        </form>
+
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-5">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-900 mb-2"
+                >
+                  Email Address
+                </label>
+                <input
+                  {...register("email")}
+                  id="email"
+                  type="text"
+                  autoComplete="email"
+                  disabled={isLoading}
+                  className={`appearance-none block w-full px-4 py-3 border ${
+                    errors.email ? "border-red-500" : "border-gray-300"
+                  } placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base disabled:bg-gray-100 disabled:cursor-not-allowed transition-all`}
+                  placeholder="you@example.com"
+                />
+                {errors.email && (
+                  <p className="mt-2 text-sm text-red-500">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-900"
+                  >
+                    Password
+                  </label>
+                </div>
+                <input
+                  {...register("password")}
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  className={`appearance-none block w-full px-4 py-3 border ${
+                    errors.password ? "border-red-500" : "border-gray-300"
+                  } placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base disabled:bg-gray-100 disabled:cursor-not-allowed transition-all`}
+                  placeholder="••••••••"
+                />
+                {errors.password && (
+                  <p className="mt-2 text-sm text-red-500">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-base font-medium rounded-xl text-white ${
+                  isLoading
+                    ? "bg-indigo-800 cursor-not-allowed"
+                    : "bg-indigo-800 hover:bg-indigo-900 cursor-pointer"
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all`}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </button>
+            </div>
+
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                Demo Credentials
+              </h3>
+              <p className="text-sm text-gray-600 font-mono">
+                Email: <span className="text-gray-900">admin</span>
+              </p>
+              <p className="text-sm text-gray-600 font-mono mt-1">
+                Password: <span className="text-gray-900">admin123</span>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
