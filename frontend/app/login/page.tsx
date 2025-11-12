@@ -67,9 +67,11 @@ export default function LoginPage() {
       }
     } catch (err) {
       // Show error toast with longer duration
+      console.log(err);
       const errorMessage =
-        err instanceof Error && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        err instanceof Error && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
           : undefined;
 
       const message = errorMessage || "Invalid credentials. Please try again.";
@@ -90,7 +92,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -115,7 +117,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
                   errors.email ? "border-red-500" : "border-gray-300"
-                } placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                } placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
                 placeholder="Email"
               />
               {errors.email && (
@@ -136,7 +138,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
                   errors.password ? "border-red-500" : "border-gray-300"
-                } placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                } placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
                 placeholder="Password"
               />
               {errors.password && (
