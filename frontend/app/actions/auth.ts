@@ -113,3 +113,22 @@ export async function logoutAction(): Promise<void> {
   // Redirect to login
   redirect('/login');
 }
+
+/**
+ * Server Action to refresh access token (callable from client)
+ */
+export async function refreshTokenAction(): Promise<{ success: boolean }> {
+  try {
+    const { refreshAccessToken } = await import('@/lib/auth');
+    const newAccessToken = await refreshAccessToken();
+
+    if (newAccessToken) {
+      return { success: true };
+    }
+
+    return { success: false };
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    return { success: false };
+  }
+}
