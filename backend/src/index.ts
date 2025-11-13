@@ -10,6 +10,7 @@ import morgan from 'morgan';
 import { testConnection, closeConnection } from './db';
 import routes from './routes';
 import { CustomError, errorHandler, httpErrorCodes } from './utils/error';
+import { startCleanupJob } from './services/cleanup.service';
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SECRET', 'PORT'];
@@ -97,6 +98,9 @@ async function startServer() {
       console.error('Failed to connect to database. Exiting...');
       process.exit(1);
     }
+
+    // Start token cleanup job
+    startCleanupJob();
 
     // Start Express server
     app.listen(PORT, () => {

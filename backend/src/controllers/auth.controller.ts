@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { httpErrorCodes, errorHandler } from '../utils/error';
 import { getToken, verifyToken } from '../utils/jwt';
 import { blacklistToken, findToken } from '../services/token.services';
+import { loginSchema, refreshTokenSchema } from '../validators/auth.validator';
 
 // Hardcoded credentials
 const HARDCODED_USER = {
@@ -17,7 +18,20 @@ export const login = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    // Validate input using Zod schema
+    const result = loginSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return next(
+        errorHandler(
+          httpErrorCodes.VALIDATION,
+          'Validation failed',
+          result.error.issues
+        )
+      );
+    }
+
+    const { email, password } = result.data;
 
     // Check hardcoded credentials
     if (email !== HARDCODED_USER.email || password !== HARDCODED_USER.password) {
@@ -64,16 +78,20 @@ export const refreshAccessToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    // Validate input using Zod schema
+    const result = refreshTokenSchema.safeParse(req.body);
 
-    if (!refreshToken) {
+    if (!result.success) {
       return next(
         errorHandler(
-          httpErrorCodes.UNAUTHORIZED,
-          'Refresh token not provided'
+          httpErrorCodes.VALIDATION,
+          'Validation failed',
+          result.error.issues
         )
       );
     }
+
+    const { refreshToken } = result.data;
 
     // Verify refresh token
     const decoded = verifyToken(refreshToken);

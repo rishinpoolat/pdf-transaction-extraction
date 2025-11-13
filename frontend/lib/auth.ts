@@ -1,4 +1,7 @@
+import "server-only";
+
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export interface User {
   id: string;
@@ -34,6 +37,23 @@ export async function isAuthenticated(): Promise<boolean> {
   const token = await getAccessToken();
   return !!token;
 }
+
+/**
+ * Data Access Layer (DAL): Verify user session
+ * This is the primary authentication check following Next.js 16 best practices
+ * Uses React cache to prevent duplicate checks during a single render pass
+ */
+export const verifySession = cache(async (): Promise<{ isAuth: boolean; accessToken?: string }> => {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return { isAuth: false };
+  }
+
+  // Additional verification could be added here
+  // For now, presence of token is sufficient
+  return { isAuth: true, accessToken };
+});
 
 /**
  * Set auth cookies (server-side only)
@@ -122,11 +142,14 @@ export async function refreshAccessToken(): Promise<string | null> {
 
 /**
  * Fetch user data from API with automatic token refresh (server-side only)
+ * Uses React cache to prevent duplicate API calls during a single render pass
+ * Part of the Data Access Layer (DAL) for consistent authorization
  */
-export async function getCurrentUser(): Promise<User | null> {
-  const accessToken = await getAccessToken();
+export const getCurrentUser = cache(async (): Promise<User | null> => {
+  // First verify session using DAL
+  const session = await verifySession();
 
-  if (!accessToken) {
+  if (!session.isAuth || !session.accessToken) {
     return null;
   }
 
@@ -137,7 +160,7 @@ export async function getCurrentUser(): Promise<User | null> {
     // First attempt to fetch user
     let response = await fetch(`${apiUrl}/auth/me`, {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${session.accessToken}`,
       },
       cache: "no-store", // Don't cache user data
     });
@@ -170,4 +193,4 @@ export async function getCurrentUser(): Promise<User | null> {
     console.error("Error fetching current user:", error);
     return null;
   }
-}
+});
