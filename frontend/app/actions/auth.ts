@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { setAuthCookies, clearAuthCookies } from "@/lib/auth";
 
 interface LoginResponse {
@@ -84,10 +85,11 @@ export async function loginAction(
 
 /**
  * Server Action for user logout
+ * Uses Next.js redirect() for proper server-side navigation
  */
 export async function logoutAction(): Promise<void> {
   try {
-    // Optionally call the backend logout endpoint to blacklist the token
+    // Call the backend logout endpoint to blacklist the token
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
 
@@ -101,21 +103,23 @@ export async function logoutAction(): Promise<void> {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      });
+      }).catch(console.error);
     }
   } catch (error) {
     console.error("Logout API error:", error);
     // Continue with local logout even if API call fails
+  } finally {
+    // Always clear auth cookies
+    await clearAuthCookies();
+
+    // Use Next.js redirect() - proper server-side navigation
+    redirect("/login");
   }
-
-  // Clear auth cookies
-  await clearAuthCookies();
-
-  // Redirect to login
 }
 
 /**
  * Server Action to refresh access token (callable from client)
+ * Uses redirect() when refresh fails - simpler than returning success/failure
  */
 export async function refreshTokenAction(): Promise<{ success: boolean }> {
   try {
@@ -126,9 +130,13 @@ export async function refreshTokenAction(): Promise<{ success: boolean }> {
       return { success: true };
     }
 
-    return { success: false };
+    // Refresh failed - clear cookies and redirect to login
+    await clearAuthCookies();
+    redirect("/login");
   } catch (error) {
     console.error("Token refresh error:", error);
-    return { success: false };
+    // Clear cookies and redirect to login
+    await clearAuthCookies();
+    redirect("/login");
   }
 }

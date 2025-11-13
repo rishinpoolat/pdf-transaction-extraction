@@ -4,7 +4,7 @@ import { refreshTokenAction } from '@/app/actions/auth';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 // Create axios instance for client-side requests
-// Now using cookie-based authentication instead of localStorage
+// Using cookie-based authentication
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
@@ -24,30 +24,39 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       // Don't try to refresh on login/logout endpoints
-      if (originalRequest.url?.includes('/auth/login') ||
-          originalRequest.url?.includes('/auth/logout')) {
+      if (
+        originalRequest.url?.includes('/auth/login') ||
+        originalRequest.url?.includes('/auth/logout')
+      ) {
         return Promise.reject(error);
       }
 
       try {
         // Call server action to refresh token
+        // If refresh fails, it will redirect to /login via redirect()
         const result = await refreshTokenAction();
 
         if (result.success) {
           // Token refreshed successfully, retry the original request
           // Cookies are already updated on the server and will be sent automatically
           return axiosInstance(originalRequest);
-        } else {
-          // Refresh failed, redirect to login
-          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-            window.location.href = '/login';
-          }
         }
+
+        // This shouldn't be reached because refreshTokenAction redirects on failure
+        return Promise.reject(error);
       } catch (refreshError) {
-        // Refresh failed, redirect to login
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        // Server action threw redirect, which causes a NEXT_REDIRECT error
+        // This is expected behavior - the redirect is happening
+        const errorMessage = String(refreshError);
+
+        if (errorMessage.includes('NEXT_REDIRECT')) {
+          // This is expected - redirect to /login is happening
+          // Let Next.js handle the redirect
+          return Promise.reject(error);
         }
+
+        // Unexpected error
+        console.error('Unexpected refresh error:', refreshError);
         return Promise.reject(refreshError);
       }
     }
