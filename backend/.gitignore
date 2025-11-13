@@ -50,3 +50,6 @@ coverage/
 
 # Drizzle
 drizzle/
+
+# Uploads
+uploads/

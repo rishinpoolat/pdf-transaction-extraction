@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { PdfUploadSection } from "@/components/pdf";
 
 export default async function DashboardPage() {
   // Fetch user data server-side
@@ -65,18 +66,8 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* Placeholder for Future Features */}
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Coming Soon
-                </h3>
-                <div className="bg-gray-100 rounded-none p-6">
-                  <p className="text-gray-600">
-                    PDF upload and transaction extraction features will be
-                    available here.
-                  </p>
-                </div>
-              </div>
+              {/* PDF Upload Section */}
+              <PdfUploadSection />
             </div>
           </div>
         </div>
