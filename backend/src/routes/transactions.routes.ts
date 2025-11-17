@@ -5,6 +5,8 @@ import {
   uploadPdf,
   getTransactions,
   getTransactionById,
+  getPdfStatus,
+  getPdfProgress,
 } from '../controllers/transactions.controller';
 
 const router = Router();
@@ -14,6 +16,12 @@ router.use(isAuthenticated);
 
 // POST /api/transactions/upload - Upload and process PDF
 router.post('/upload', upload.single('pdf'), uploadPdf);
+
+// GET /api/transactions/status/:pdfId - Get PDF processing status
+router.get('/status/:pdfId', getPdfStatus);
+
+// GET /api/transactions/progress/:pdfId - Get real-time progress (SSE)
+router.get('/progress/:pdfId', getPdfProgress);
 
 // GET /api/transactions - Get all transactions with optional filters
 router.get('/', getTransactions);

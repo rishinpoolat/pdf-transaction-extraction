@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { errorHandler, httpErrorCodes } from '../utils/error';
-import { processPdf, savePdfFile } from '../services/pdf.service';
+import { savePdfFile } from '../services/pdf.service';
+import { pdfProcessingQueue } from '../config/queue.config';
+import { db } from '../db';
+import { pdfs, transactions } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * Upload and process PDF file
@@ -28,31 +32,49 @@ export async function uploadPdf(
       );
     }
 
-    // Process PDF: parse and extract transactions
-    const { parseResult, transactions } = await processPdf(file.buffer);
-
     // Save PDF file to disk
     const savedFile = await savePdfFile(file.buffer, file.originalname);
 
-    // Return success response
-    return res.status(200).json({
+    // Create PDF record in database
+    const [pdfRecord] = await db
+      .insert(pdfs)
+      .values({
+        filename: savedFile.filename,
+        originalName: savedFile.originalName,
+        filePath: savedFile.filepath,
+        fileSize: savedFile.fileSize,
+        processingStatus: 'queued',
+        currentStep: 'queued',
+      })
+      .returning();
+
+    // Add job to queue
+    const job = await pdfProcessingQueue.add('process-pdf', {
+      pdfId: pdfRecord.id,
+      filename: savedFile.filename,
+      filepath: savedFile.filepath,
+      originalName: savedFile.originalName,
+    });
+
+    // Update PDF record with job ID
+    await db
+      .update(pdfs)
+      .set({ jobId: job.id })
+      .where(eq(pdfs.id, pdfRecord.id));
+
+    // Return success response immediately
+    return res.status(202).json({
       success: true,
-      message: 'PDF uploaded and processed successfully',
+      message: 'PDF uploaded and queued for processing',
       data: {
-        pdf: {
-          filename: savedFile.filename,
-          originalName: savedFile.originalName,
-          fileSize: savedFile.fileSize,
-          numPages: parseResult.numPages,
-          status: 'completed',
-        },
-        transactions: transactions,
-        total_transactions: transactions.length,
-        parseInfo: {
-          numPages: parseResult.numPages,
-          pdfVersion: parseResult.version,
-          textLength: parseResult.text.length,
-        },
+        pdfId: pdfRecord.id,
+        jobId: job.id,
+        filename: savedFile.filename,
+        originalName: savedFile.originalName,
+        fileSize: savedFile.fileSize,
+        status: 'queued',
+        statusUrl: `/api/transactions/status/${pdfRecord.id}`,
+        progressUrl: `/api/transactions/progress/${pdfRecord.id}`,
       },
     });
   } catch (error) {
@@ -76,19 +98,46 @@ export async function uploadPdf(
 
 /**
  * Get all transactions with optional filters
- * GET /api/transactions
+ * GET /api/transactions?pdfId=1&page=1&limit=50
  */
 export async function getTransactions(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
+    const { pdfId, page = '1', limit = '50' } = req.query;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const offset = (pageNum - 1) * limitNum;
+
+    let query = db.select().from(transactions);
+
+    // Filter by PDF ID if provided
+    if (pdfId) {
+      query = query.where(eq(transactions.pdfId, parseInt(pdfId as string)));
+    }
+
+    // Get transactions with pagination
+    const results = await query.limit(limitNum).offset(offset);
+
+    // Get total count
+    const totalQuery = pdfId
+      ? db.select().from(transactions).where(eq(transactions.pdfId, parseInt(pdfId as string)))
+      : db.select().from(transactions);
+
+    const allResults = await totalQuery;
+    const total = allResults.length;
+
     return res.status(200).json({
       success: true,
       data: {
-        transactions: [],
-        total: 0,
+        transactions: results,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
       },
     });
   } catch (error) {
@@ -111,18 +160,250 @@ export async function getTransactionById(
   next: NextFunction
 ) {
   try {
-    const { id } = req.params;
+    const transactionId = parseInt(req.params.id);
+
+    const [transaction] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, transactionId));
+
+    if (!transaction) {
+      return next(errorHandler(httpErrorCodes.NOT_FOUND, 'Transaction not found'));
+    }
 
     return res.status(200).json({
       success: true,
-      data: null,
-      message: `Transaction ${id} not implemented`,
+      data: transaction,
     });
   } catch (error) {
     return next(
       errorHandler(
         httpErrorCodes.INTERNAL_SERVER,
         'Failed to retrieve transaction'
+      )
+    );
+  }
+}
+
+/**
+ * Get all PDFs
+ * GET /api/transactions/pdfs
+ */
+export async function getAllPdfs(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const allPdfs = await db.select().from(pdfs).orderBy(pdfs.uploadedAt);
+
+    return res.status(200).json({
+      success: true,
+      data: allPdfs,
+      total: allPdfs.length,
+    });
+  } catch (error) {
+    return next(
+      errorHandler(httpErrorCodes.INTERNAL_SERVER, 'Failed to retrieve PDFs')
+    );
+  }
+}
+
+/**
+ * Get PDF by ID with transactions
+ * GET /api/transactions/pdf/:pdfId
+ */
+export async function getPdfWithTransactions(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const pdfId = parseInt(req.params.pdfId);
+
+    // Get PDF details
+    const [pdf] = await db.select().from(pdfs).where(eq(pdfs.id, pdfId));
+
+    if (!pdf) {
+      return next(errorHandler(httpErrorCodes.NOT_FOUND, 'PDF not found'));
+    }
+
+    // Get transactions for this PDF
+    const pdfTransactions = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.pdfId, pdfId))
+      .orderBy(transactions.pageNumber);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        pdf,
+        transactions: pdfTransactions,
+        transactionCount: pdfTransactions.length,
+      },
+    });
+  } catch (error) {
+    return next(
+      errorHandler(
+        httpErrorCodes.INTERNAL_SERVER,
+        'Failed to retrieve PDF details'
+      )
+    );
+  }
+}
+
+/**
+ * Get PDF processing status
+ * GET /api/transactions/status/:pdfId
+ */
+export async function getPdfStatus(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const pdfId = parseInt(req.params.pdfId);
+
+    if (isNaN(pdfId)) {
+      return next(errorHandler(httpErrorCodes.BAD_REQUEST, 'Invalid PDF ID'));
+    }
+
+    // Get PDF record
+    const [pdfRecord] = await db.select().from(pdfs).where(eq(pdfs.id, pdfId));
+
+    if (!pdfRecord) {
+      return next(errorHandler(httpErrorCodes.NOT_FOUND, 'PDF not found'));
+    }
+
+    // Get job status if job ID exists
+    let jobStatus = null;
+    if (pdfRecord.jobId) {
+      const job = await pdfProcessingQueue.getJob(pdfRecord.jobId);
+      if (job) {
+        jobStatus = {
+          id: job.id,
+          state: await job.getState(),
+          progress: job.progress,
+          attemptsMade: job.attemptsMade,
+          failedReason: job.failedReason,
+        };
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        pdfId: pdfRecord.id,
+        filename: pdfRecord.filename,
+        originalName: pdfRecord.originalName,
+        status: pdfRecord.processingStatus,
+        currentStep: pdfRecord.currentStep,
+        totalPages: pdfRecord.totalPages,
+        processedPages: pdfRecord.processedPages,
+        progressPercentage: pdfRecord.progressPercentage,
+        totalTransactions: pdfRecord.totalTransactions,
+        uploadedAt: pdfRecord.uploadedAt,
+        processedAt: pdfRecord.processedAt,
+        errorMessage: pdfRecord.errorMessage,
+        job: jobStatus,
+      },
+    });
+  } catch (error) {
+    return next(
+      errorHandler(httpErrorCodes.INTERNAL_SERVER, 'Failed to get PDF status')
+    );
+  }
+}
+
+/**
+ * Get PDF processing progress (Server-Sent Events)
+ * GET /api/transactions/progress/:pdfId
+ */
+export async function getPdfProgress(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const pdfId = parseInt(req.params.pdfId);
+
+    if (isNaN(pdfId)) {
+      return next(errorHandler(httpErrorCodes.BAD_REQUEST, 'Invalid PDF ID'));
+    }
+
+    // Set headers for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+    // Send initial connection message
+    res.write('data: {"type":"connected"}\n\n');
+
+    // Poll for updates every 2 seconds
+    const interval = setInterval(async () => {
+      try {
+        const [pdfRecord] = await db
+          .select()
+          .from(pdfs)
+          .where(eq(pdfs.id, pdfId));
+
+        if (!pdfRecord) {
+          res.write(
+            `data: ${JSON.stringify({ type: 'error', message: 'PDF not found' })}\n\n`
+          );
+          clearInterval(interval);
+          res.end();
+          return;
+        }
+
+        // Send progress update
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'progress',
+            pdfId: pdfRecord.id,
+            status: pdfRecord.processingStatus,
+            currentStep: pdfRecord.currentStep,
+            totalPages: pdfRecord.totalPages,
+            processedPages: pdfRecord.processedPages,
+            progressPercentage: pdfRecord.progressPercentage,
+            totalTransactions: pdfRecord.totalTransactions,
+          })}\n\n`
+        );
+
+        // If processing is complete or failed, close the connection
+        if (
+          pdfRecord.processingStatus === 'completed' ||
+          pdfRecord.processingStatus === 'failed'
+        ) {
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'complete',
+              status: pdfRecord.processingStatus,
+              errorMessage: pdfRecord.errorMessage,
+            })}\n\n`
+          );
+          clearInterval(interval);
+          res.end();
+        }
+      } catch (error) {
+        console.error('Error sending progress update:', error);
+        clearInterval(interval);
+        res.end();
+      }
+    }, 2000);
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      clearInterval(interval);
+      res.end();
+    });
+  } catch (error) {
+    return next(
+      errorHandler(
+        httpErrorCodes.INTERNAL_SERVER,
+        'Failed to start progress stream'
       )
     );
   }

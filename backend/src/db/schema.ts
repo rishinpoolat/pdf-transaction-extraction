@@ -33,8 +33,13 @@ export const pdfs = pgTable(
       .default("application/pdf"),
     processingStatus: varchar("processing_status", { length: 50 }).default(
       "pending"
-    ),
+    ), // pending, queued, processing, completed, failed
+    totalPages: integer("total_pages").default(0),
+    processedPages: integer("processed_pages").default(0),
     totalTransactions: integer("total_transactions").default(0),
+    progressPercentage: integer("progress_percentage").default(0),
+    currentStep: varchar("current_step", { length: 100 }), // parsing, translating, storing
+    jobId: varchar("job_id", { length: 255 }), // BullMQ job ID
     uploadedAt: timestamp("uploaded_at").defaultNow(),
     processedAt: timestamp("processed_at"),
     errorMessage: text("error_message"),
@@ -42,6 +47,7 @@ export const pdfs = pgTable(
   (table) => ({
     statusIdx: index("idx_pdfs_status").on(table.processingStatus),
     uploadedAtIdx: index("idx_pdfs_uploaded_at").on(table.uploadedAt),
+    jobIdIdx: index("idx_pdfs_job_id").on(table.jobId),
   })
 );
 
