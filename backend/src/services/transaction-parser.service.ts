@@ -16,9 +16,9 @@ export interface ParsedTransaction {
   // Transaction type
   nature?: string; // Conveyance, Sale Deed, etc.
 
-  // Parties
-  executantName?: string; // Seller (எழுதிக்கொடுத்தவர்)
-  claimantName?: string;  // Buyer (எழுதி வாங்கியவர்)
+  // Parties (English names extracted from translated text)
+  executantName?: string; // Seller
+  claimantName?: string;  // Buyer
 
   // Property details
   surveyNumber?: string;
@@ -92,14 +92,29 @@ function extractNature(text: string): string | undefined {
 }
 
 /**
- * Extract executant name (seller)
+ * Extract executant name (seller) - tries English first, then Tamil
  */
-function extractExecutantName(text: string): string | undefined {
-  // Pattern: Name of Executant(s) followed by Tamil names
-  const executantMatch = text.match(/Name of Executant\(s\)\/[\s\S]+?1\.\s*([^\n]+)/);
-  if (executantMatch) {
-    let name = executantMatch[1].trim();
-    // Clean up extra info in parentheses at end
+function extractExecutantName(text: string, translatedText?: string): string | undefined {
+  // Try to extract from English translated text first
+  if (translatedText) {
+    // Pattern: "Name of Executant(s)" in English translation
+    const englishMatch = translatedText.match(/Name of (?:Executant|Executors?|Sellers?)\(?s?\)?[:\s]+(?:1\.\s*)?([^\n.]+?)(?:\s*(?:2\.|Address|Village|\n|$))/i);
+    if (englishMatch) {
+      let name = englishMatch[1].trim();
+      // Clean up common artifacts
+      name = name.replace(/\s*\([^)]*\)\s*$/, '');
+      name = name.replace(/\s*-\s*$/, '');
+      name = name.replace(/^["'\s]+|["'\s]+$/g, '');
+      if (name.length > 2 && name.length < 200) {
+        return name;
+      }
+    }
+  }
+
+  // Fallback to Tamil text pattern
+  const tamilMatch = text.match(/Name of Executant\(s\)\/[\s\S]+?1\.\s*([^\n]+)/);
+  if (tamilMatch) {
+    let name = tamilMatch[1].trim();
     name = name.replace(/\s*\([^)]*\)\s*$/, '');
     return name;
   }
@@ -108,14 +123,29 @@ function extractExecutantName(text: string): string | undefined {
 }
 
 /**
- * Extract claimant name (buyer)
+ * Extract claimant name (buyer) - tries English first, then Tamil
  */
-function extractClaimantName(text: string): string | undefined {
-  // Pattern: Name of Claimant(s) followed by Tamil names
-  const claimantMatch = text.match(/Name of Claimant\(s\)\/[\s\S]+?1\.\s*([^\n]+)/);
-  if (claimantMatch) {
-    let name = claimantMatch[1].trim();
-    // Clean up
+function extractClaimantName(text: string, translatedText?: string): string | undefined {
+  // Try to extract from English translated text first
+  if (translatedText) {
+    // Pattern: "Name of Claimant(s)" in English translation
+    const englishMatch = translatedText.match(/Name of (?:Claimant|Claimants?|Buyers?)\(?s?\)?[:\s]+(?:1\.\s*)?([^\n.]+?)(?:\s*(?:2\.|Address|Village|Survey|\n|$))/i);
+    if (englishMatch) {
+      let name = englishMatch[1].trim();
+      // Clean up common artifacts
+      name = name.replace(/\s*\([^)]*\)\s*$/, '');
+      name = name.replace(/\s*-\s*$/, '');
+      name = name.replace(/^["'\s]+|["'\s]+$/g, '');
+      if (name.length > 2 && name.length < 200) {
+        return name;
+      }
+    }
+  }
+
+  // Fallback to Tamil text pattern
+  const tamilMatch = text.match(/Name of Claimant\(s\)\/[\s\S]+?1\.\s*([^\n]+)/);
+  if (tamilMatch) {
+    let name = tamilMatch[1].trim();
     name = name.replace(/\s*-\s*$/, '').trim();
     return name;
   }
@@ -156,10 +186,21 @@ function extractPlotNumber(text: string): string | undefined {
 }
 
 /**
- * Extract village name
+ * Extract village name - tries English first, then Tamil
  */
-function extractVillage(text: string): string | undefined {
-  // Pattern: Village /கிராமம் :Thiruvennainallur
+function extractVillage(text: string, translatedText?: string): string | undefined {
+  // Try to extract from English translated text first
+  if (translatedText) {
+    const englishMatch = translatedText.match(/Village[:\s]+([A-Za-z\s]+?)(?:\s*(?:Survey|Plot|Street|Property|,|\n|$))/i);
+    if (englishMatch) {
+      const village = englishMatch[1].trim();
+      if (village.length > 2 && village.length < 100 && /^[A-Za-z\s]+$/.test(village)) {
+        return village;
+      }
+    }
+  }
+
+  // Fallback: Village /கிராமம் :Thiruvennainallur
   const villageMatch = text.match(/Village\s*\/கிராமம்\s*:([^\s]+)/);
   if (villageMatch) {
     return villageMatch[1].trim();
@@ -253,9 +294,27 @@ function extractPreviousDocNumber(text: string): string | undefined {
 }
 
 /**
- * Main parser function - extracts all transaction data
+ * Extract street name from translated text
  */
-export function parseTransactionText(text: string): ParsedTransaction {
+function extractStreet(translatedText?: string): string | undefined {
+  if (!translatedText) return undefined;
+
+  const streetMatch = translatedText.match(/Street[:\s]+([A-Za-z\s]+?)(?:\s*(?:Survey|Plot|Village|Property|,|\n|$))/i);
+  if (streetMatch) {
+    const street = streetMatch[1].trim();
+    if (street.length > 2 && street.length < 100 && /^[A-Za-z\s]+$/.test(street)) {
+      return street;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Main parser function - extracts all transaction data
+ * Now accepts optional translatedText to extract English names and locations
+ */
+export function parseTransactionText(text: string, translatedText?: string): ParsedTransaction {
   const docInfo = extractDocumentNumber(text);
   const dates = extractDates(text);
   const volumePage = extractVolumeAndPage(text);
@@ -270,12 +329,17 @@ export function parseTransactionText(text: string): ParsedTransaction {
 
     nature: extractNature(text),
 
-    executantName: extractExecutantName(text),
-    claimantName: extractClaimantName(text),
+    // Extract English names from translated text when available
+    executantName: extractExecutantName(text, translatedText),
+    claimantName: extractClaimantName(text, translatedText),
 
     surveyNumber: extractSurveyNumber(text),
     plotNumber: extractPlotNumber(text),
-    village: extractVillage(text),
+
+    // Extract English village from translated text when available
+    village: extractVillage(text, translatedText),
+    street: extractStreet(translatedText),
+
     propertyType: extractPropertyType(text),
     propertyExtent: extractPropertyExtent(text),
 

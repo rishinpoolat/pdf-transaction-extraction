@@ -8,30 +8,28 @@ export interface Transaction {
   id: number;
   pdfId: number;
   pageNumber: number;
-  documentNumberTamil?: string;
-  documentNumberEnglish?: string;
+  documentNumber?: string;
   documentYear?: string;
   executionDate?: string;
   presentationDate?: string;
   registrationDate?: string;
   transactionNature?: string;
-  sellerNameTamil?: string;
-  sellerNameEnglish?: string;
-  buyerNameTamil?: string;
-  buyerNameEnglish?: string;
-  surveyNumberTamil?: string;
-  surveyNumberEnglish?: string;
-  plotNumberTamil?: string;
-  plotNumberEnglish?: string;
-  villageTamil?: string;
-  villageEnglish?: string;
+  sellerName?: string;
+  buyerName?: string;
+  surveyNumber?: string;
+  plotNumber?: string;
+  village?: string;
+  street?: string;
   propertyType?: string;
   propertyExtent?: string;
   considerationValue?: string;
   marketValue?: string;
-  originalText?: string;
-  translatedText?: string;
+  previousDocumentNumber?: string;
+  volumeNumber?: string;
+  pageNumberRef?: string;
+  extractionConfidence?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TransactionsResponse {

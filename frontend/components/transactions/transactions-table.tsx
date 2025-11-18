@@ -19,13 +19,12 @@ export function TransactionsTable({
   const filteredTransactions = transactions.filter((txn) => {
     const matchesSearch =
       searchTerm === "" ||
-      txn.buyerNameTamil?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      txn.buyerNameEnglish?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      txn.sellerNameTamil?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      txn.sellerNameEnglish?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      txn.documentNumberTamil?.includes(searchTerm) ||
-      txn.surveyNumberTamil?.includes(searchTerm) ||
-      txn.plotNumberTamil?.includes(searchTerm);
+      txn.buyerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      txn.sellerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      txn.documentNumber?.includes(searchTerm) ||
+      txn.surveyNumber?.includes(searchTerm) ||
+      txn.plotNumber?.includes(searchTerm) ||
+      txn.village?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFilter =
       filterType === "all" ||
@@ -43,7 +42,7 @@ export function TransactionsTable({
         <div className="flex-1">
           <input
             type="text"
-            placeholder="Search by buyer, seller, document no., survey no., plot no..."
+            placeholder="Search by buyer, seller, document no., survey no., plot no., village..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -119,7 +118,7 @@ export function TransactionsTable({
                     {txn.pageNumber || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {txn.documentNumberTamil || "-"}
+                    {txn.documentNumber || "-"}
                     {txn.documentYear && `/${txn.documentYear}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -129,20 +128,20 @@ export function TransactionsTable({
                     {txn.transactionNature || "-"}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="max-w-xs truncate" title={txn.sellerNameTamil || txn.sellerNameEnglish || "-"}>
-                      {txn.sellerNameTamil || txn.sellerNameEnglish || "-"}
+                    <div className="max-w-xs truncate" title={txn.sellerName || "-"}>
+                      {txn.sellerName || "-"}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="max-w-xs truncate" title={txn.buyerNameTamil || txn.buyerNameEnglish || "-"}>
-                      {txn.buyerNameTamil || txn.buyerNameEnglish || "-"}
+                    <div className="max-w-xs truncate" title={txn.buyerName || "-"}>
+                      {txn.buyerName || "-"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {txn.surveyNumberTamil || "-"}
+                    {txn.surveyNumber || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {txn.plotNumberTamil || "-"}
+                    {txn.plotNumber || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {txn.considerationValue ? `₹${txn.considerationValue}` : "-"}

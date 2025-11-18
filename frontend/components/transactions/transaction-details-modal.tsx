@@ -26,7 +26,7 @@ export function TransactionDetailsModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">
-            Transaction Details - {transaction.documentNumberTamil}/{transaction.documentYear}
+            Transaction Details - {transaction.documentNumber}/{transaction.documentYear}
           </h2>
           <button
             onClick={onClose}
@@ -45,11 +45,12 @@ export function TransactionDetailsModal({
                 Document Information
               </h3>
               <div className="space-y-1">
-                <DetailRow label="Document Number (Tamil)" value={transaction.documentNumberTamil} />
-                <DetailRow label="Document Number (English)" value={transaction.documentNumberEnglish} />
+                <DetailRow label="Document Number" value={transaction.documentNumber} />
                 <DetailRow label="Document Year" value={transaction.documentYear} />
                 <DetailRow label="Transaction Nature" value={transaction.transactionNature} />
                 <DetailRow label="Page Number" value={transaction.pageNumber?.toString()} />
+                <DetailRow label="Volume Number" value={transaction.volumeNumber} />
+                <DetailRow label="Page Reference" value={transaction.pageNumberRef} />
               </div>
             </div>
 
@@ -67,10 +68,8 @@ export function TransactionDetailsModal({
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Parties</h3>
               <div className="space-y-1">
-                <DetailRow label="Seller (Tamil)" value={transaction.sellerNameTamil} />
-                <DetailRow label="Seller (English)" value={transaction.sellerNameEnglish} />
-                <DetailRow label="Buyer (Tamil)" value={transaction.buyerNameTamil} />
-                <DetailRow label="Buyer (English)" value={transaction.buyerNameEnglish} />
+                <DetailRow label="Seller Name" value={transaction.sellerName} />
+                <DetailRow label="Buyer Name" value={transaction.buyerName} />
               </div>
             </div>
 
@@ -80,12 +79,10 @@ export function TransactionDetailsModal({
                 Property Details
               </h3>
               <div className="space-y-1">
-                <DetailRow label="Survey Number (Tamil)" value={transaction.surveyNumberTamil} />
-                <DetailRow label="Survey Number (English)" value={transaction.surveyNumberEnglish} />
-                <DetailRow label="Plot Number (Tamil)" value={transaction.plotNumberTamil} />
-                <DetailRow label="Plot Number (English)" value={transaction.plotNumberEnglish} />
-                <DetailRow label="Village (Tamil)" value={transaction.villageTamil} />
-                <DetailRow label="Village (English)" value={transaction.villageEnglish} />
+                <DetailRow label="Survey Number" value={transaction.surveyNumber} />
+                <DetailRow label="Plot Number" value={transaction.plotNumber} />
+                <DetailRow label="Village" value={transaction.village} />
+                <DetailRow label="Street" value={transaction.street} />
                 <DetailRow label="Property Type" value={transaction.propertyType} />
                 <DetailRow label="Property Extent" value={transaction.propertyExtent} />
               </div>
@@ -102,30 +99,14 @@ export function TransactionDetailsModal({
               </div>
             </div>
 
-            {/* Original Text */}
-            {transaction.originalText && (
+            {/* Reference Information */}
+            {transaction.previousDocumentNumber && (
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Original Text (Tamil)
+                  Reference Information
                 </h3>
-                <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-                  <pre className="text-sm whitespace-pre-wrap break-words font-sans">
-                    {transaction.originalText}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* Translated Text */}
-            {transaction.translatedText && transaction.translatedText !== "[Translation unavailable - rate limited]" && (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Translated Text (English)
-                </h3>
-                <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-                  <pre className="text-sm whitespace-pre-wrap break-words font-sans">
-                    {transaction.translatedText}
-                  </pre>
+                <div className="space-y-1">
+                  <DetailRow label="Previous Document Number" value={transaction.previousDocumentNumber} />
                 </div>
               </div>
             )}

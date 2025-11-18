@@ -51,7 +51,7 @@ export const pdfs = pgTable(
   })
 );
 
-// Transactions table - stores extracted transactions
+// Transactions table - stores extracted transactions (English only)
 export const transactions = pgTable(
   "transactions",
   {
@@ -60,34 +60,23 @@ export const transactions = pgTable(
       .notNull()
       .references(() => pdfs.id, { onDelete: "cascade" }),
 
-    // Tamil fields
-    buyerNameTamil: text("buyer_name_tamil"),
-    sellerNameTamil: text("seller_name_tamil"),
-    houseNumberTamil: varchar("house_number_tamil", { length: 100 }),
-    surveyNumberTamil: varchar("survey_number_tamil", { length: 100 }),
-    documentNumberTamil: varchar("document_number_tamil", { length: 100 }),
-
-    // English fields
-    buyerNameEnglish: text("buyer_name_english"),
-    sellerNameEnglish: text("seller_name_english"),
-    houseNumberEnglish: varchar("house_number_english", { length: 100 }),
-    surveyNumberEnglish: varchar("survey_number_english", { length: 100 }),
-    documentNumberEnglish: varchar("document_number_english", { length: 100 }),
+    // Party names (English)
+    buyerName: text("buyer_name"),
+    sellerName: text("seller_name"),
 
     // Document details
+    documentNumber: varchar("document_number", { length: 100 }),
     documentYear: varchar("document_year", { length: 10 }),
     executionDate: varchar("execution_date", { length: 50 }),
     presentationDate: varchar("presentation_date", { length: 50 }),
     registrationDate: varchar("registration_date", { length: 50 }),
     transactionNature: varchar("transaction_nature", { length: 100 }),
 
-    // Property details
-    plotNumberTamil: varchar("plot_number_tamil", { length: 100 }),
-    plotNumberEnglish: varchar("plot_number_english", { length: 100 }),
-    villageTamil: varchar("village_tamil", { length: 200 }),
-    villageEnglish: varchar("village_english", { length: 200 }),
-    streetTamil: varchar("street_tamil", { length: 200 }),
-    streetEnglish: varchar("street_english", { length: 200 }),
+    // Property details (English)
+    surveyNumber: varchar("survey_number", { length: 100 }),
+    plotNumber: varchar("plot_number", { length: 100 }),
+    village: varchar("village", { length: 200 }),
+    street: varchar("street", { length: 200 }),
     propertyType: varchar("property_type", { length: 100 }),
     propertyExtent: varchar("property_extent", { length: 100 }),
 
@@ -100,14 +89,6 @@ export const transactions = pgTable(
     volumeNumber: varchar("volume_number", { length: 50 }),
     pageNumberRef: varchar("page_number_ref", { length: 50 }),
 
-    // Common fields
-    transactionDate: varchar("transaction_date", { length: 50 }),
-    transactionValue: decimal("transaction_value", { precision: 15, scale: 2 }),
-
-    // Text content
-    originalText: text("original_text"),
-    translatedText: text("translated_text"),
-
     // Metadata
     pageNumber: integer("page_number"),
     extractionConfidence: decimal("extraction_confidence", {
@@ -119,31 +100,12 @@ export const transactions = pgTable(
   },
   (table) => ({
     pdfIdIdx: index("idx_transactions_pdf_id").on(table.pdfId),
-    buyerTamilIdx: index("idx_transactions_buyer_tamil").on(
-      table.buyerNameTamil
-    ),
-    buyerEnglishIdx: index("idx_transactions_buyer_english").on(
-      table.buyerNameEnglish
-    ),
-    sellerTamilIdx: index("idx_transactions_seller_tamil").on(
-      table.sellerNameTamil
-    ),
-    sellerEnglishIdx: index("idx_transactions_seller_english").on(
-      table.sellerNameEnglish
-    ),
-    houseNumberIdx: index("idx_transactions_house_number").on(
-      table.houseNumberTamil,
-      table.houseNumberEnglish
-    ),
-    surveyNumberIdx: index("idx_transactions_survey_number").on(
-      table.surveyNumberTamil,
-      table.surveyNumberEnglish
-    ),
-    documentNumberIdx: index("idx_transactions_document_number").on(
-      table.documentNumberTamil,
-      table.documentNumberEnglish
-    ),
-    dateIdx: index("idx_transactions_date").on(table.transactionDate),
+    buyerIdx: index("idx_transactions_buyer").on(table.buyerName),
+    sellerIdx: index("idx_transactions_seller").on(table.sellerName),
+    surveyNumberIdx: index("idx_transactions_survey_number").on(table.surveyNumber),
+    documentNumberIdx: index("idx_transactions_document_number").on(table.documentNumber),
+    dateIdx: index("idx_transactions_date").on(table.executionDate),
+    villageIdx: index("idx_transactions_village").on(table.village),
   })
 );
 

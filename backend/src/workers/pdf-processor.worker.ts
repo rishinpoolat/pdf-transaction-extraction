@@ -111,22 +111,21 @@ async function processPdfJob(job: Job<PdfProcessingJobData>) {
         for (let txnIndex = 0; txnIndex < transactionTexts.length; txnIndex++) {
           const txnText = transactionTexts[txnIndex];
 
-          // Parse transaction to extract structured fields
-          const parsedTxn = parseTransactionText(txnText);
+          // Parse transaction to extract structured fields (pass translated text for English extraction)
+          const parsedTxn = parseTransactionText(txnText, translatedText);
 
           console.log(`  [${txnIndex + 1}/${transactionTexts.length}] Doc ${parsedTxn.documentNumber}/${parsedTxn.documentYear} - ${parsedTxn.nature || 'Unknown type'}`);
+          console.log(`    ├─ Seller: ${parsedTxn.executantName || 'N/A'}`);
+          console.log(`    ├─ Buyer: ${parsedTxn.claimantName || 'N/A'}`);
+          console.log(`    ├─ Village: ${parsedTxn.village || 'N/A'}`);
+          console.log(`    └─ Survey: ${parsedTxn.surveyNumber || 'N/A'}`);
 
           await db.insert(transactions).values({
             pdfId: pdfId,
             pageNumber: page.pageNumber,
 
-            // Raw text fields
-            originalText: parsedTxn.rawText,
-            translatedText: translatedText,
-
             // Document details
-            documentNumberTamil: parsedTxn.documentNumber,
-            documentNumberEnglish: parsedTxn.documentNumber, // Same as Tamil (numeric)
+            documentNumber: parsedTxn.documentNumber,
             documentYear: parsedTxn.documentYear,
 
             // Dates
@@ -137,21 +136,15 @@ async function processPdfJob(job: Job<PdfProcessingJobData>) {
             // Transaction type
             transactionNature: parsedTxn.nature,
 
-            // Parties
-            sellerNameTamil: parsedTxn.executantName,
-            sellerNameEnglish: null, // Will be in translated text
-            buyerNameTamil: parsedTxn.claimantName,
-            buyerNameEnglish: null, // Will be in translated text
+            // Parties (English names extracted from translated text)
+            sellerName: parsedTxn.executantName,
+            buyerName: parsedTxn.claimantName,
 
-            // Property details
-            surveyNumberTamil: parsedTxn.surveyNumber,
-            surveyNumberEnglish: parsedTxn.surveyNumber, // Same (numeric)
-            plotNumberTamil: parsedTxn.plotNumber,
-            plotNumberEnglish: parsedTxn.plotNumber, // Same (numeric)
-            villageTamil: parsedTxn.village,
-            villageEnglish: null, // Will be in translated text
-            streetTamil: null,
-            streetEnglish: null,
+            // Property details (English extracted from translated text)
+            surveyNumber: parsedTxn.surveyNumber,
+            plotNumber: parsedTxn.plotNumber,
+            village: parsedTxn.village,
+            street: parsedTxn.street,
             propertyType: parsedTxn.propertyType,
             propertyExtent: parsedTxn.propertyExtent,
 
