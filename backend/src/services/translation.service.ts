@@ -3,25 +3,32 @@ import redisClient from '../config/redis.config';
 import crypto from 'crypto';
 
 /**
- * Google Translate Free API Limits (based on @vitalets/google-translate-api observations):
- * - Approximately 100-200 requests per hour per IP
- * - Rate limiting kicks in around 80-100 rapid requests
- * - Recommended: 2-3 requests per minute maximum for sustained use
+ * Google Translate Free API Strategy (based on research and testing):
  *
- * Strategy: Very conservative with long delays to avoid hitting limits
+ * Rate Limits (observed):
+ * - ~80-100 requests before IP throttling kicks in
+ * - Rate limit resets gradually over time (not instant)
+ * - Burst requests trigger faster throttling
+ *
+ * Optimized Strategy:
+ * - Slow and steady: 1 request every 5 seconds (~12 requests/min, 720/hour)
+ * - When rate limited: Wait 1 minute, then retry with increasing delays
+ * - Skip translation after 3 attempts to avoid blocking entire job
+ * - Aggressive caching to reduce API calls
  */
 const TRANSLATION_CONFIG = {
   sourceLang: 'ta', // Tamil
   targetLang: 'en', // English
   maxChunkSize: 5000, // Google Translate character limit
-  cacheExpiry: 60 * 60 * 24 * 7, // 7 days in seconds
+  cacheExpiry: 60 * 60 * 24 * 30, // 30 days in seconds (longer cache)
   rateLimit: {
-    maxRequests: 2, // Only 2 requests per minute
+    maxRequests: 10, // 10 requests per minute
     perSeconds: 60, // Per minute
   },
-  delayBetweenRequests: 35000, // 35 seconds between requests (very conservative)
-  maxRetries: 10, // More retries
-  initialBackoff: 180000, // Start with 3 minutes wait on rate limit
+  delayBetweenRequests: 5000, // 5 seconds between requests (reasonable pace)
+  maxRetries: 3, // Only try 3 times, then skip to avoid blocking
+  initialBackoff: 60000, // 1 minute wait on rate limit
+  backoffMultiplier: 2, // 1min, 2min, 4min
 };
 
 // Rate limiting using Redis
@@ -98,9 +105,9 @@ function splitIntoChunks(text: string, maxSize: number = TRANSLATION_CONFIG.maxC
 }
 
 /**
- * Translate a single text chunk with retry logic
+ * Translate a single text chunk with optimized retry logic
  */
-async function translateChunk(text: string, retries: number = TRANSLATION_CONFIG.maxRetries): Promise<string> {
+async function translateChunk(text: string): Promise<string> {
   // Check cache first
   const cached = await getCachedTranslation(text);
   if (cached) {
@@ -115,7 +122,7 @@ async function translateChunk(text: string, retries: number = TRANSLATION_CONFIG
   await new Promise((resolve) => setTimeout(resolve, TRANSLATION_CONFIG.delayBetweenRequests));
 
   // Attempt translation with retries
-  for (let attempt = 1; attempt <= retries; attempt++) {
+  for (let attempt = 1; attempt <= TRANSLATION_CONFIG.maxRetries; attempt++) {
     try {
       const result = await translate(text, {
         from: TRANSLATION_CONFIG.sourceLang,
@@ -129,32 +136,35 @@ async function translateChunk(text: string, retries: number = TRANSLATION_CONFIG
 
       return translatedText;
     } catch (error: any) {
-      console.error(`Translation attempt ${attempt}/${retries} failed:`, error.message || error);
+      const isRateLimited = error.message?.includes('Too Many Requests') || error.name === 'TooManyRequestsError';
 
-      // If rate limited, wait with exponential backoff
-      if (error.message?.includes('Too Many Requests') || error.name === 'TooManyRequestsError') {
-        // Exponential backoff: 3min, 6min, 12min, 24min...
-        const waitTime = TRANSLATION_CONFIG.initialBackoff * Math.pow(2, attempt - 1);
+      console.error(`❌ Translation attempt ${attempt}/${TRANSLATION_CONFIG.maxRetries} failed:`, error.message || error);
+
+      // Last attempt - give up
+      if (attempt === TRANSLATION_CONFIG.maxRetries) {
+        console.log(`⚠️ Translation skipped after ${TRANSLATION_CONFIG.maxRetries} attempts`);
+        return '[TRANSLATION_SKIPPED]';
+      }
+
+      // Calculate wait time
+      let waitTime: number;
+      if (isRateLimited) {
+        // Rate limited: exponential backoff (1min, 2min, 4min)
+        waitTime = TRANSLATION_CONFIG.initialBackoff * Math.pow(TRANSLATION_CONFIG.backoffMultiplier, attempt - 1);
         const minutes = Math.floor(waitTime / 60000);
-        console.log(`⏳ Rate limited. Waiting ${minutes} minutes before retry ${attempt + 1}/${retries}...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-        continue;
+        const seconds = Math.floor((waitTime % 60000) / 1000);
+        console.log(`⏳ Rate limited. Waiting ${minutes}m ${seconds}s before retry ${attempt + 1}/${TRANSLATION_CONFIG.maxRetries}...`);
+      } else {
+        // Other errors: shorter wait (10s, 20s, 40s)
+        waitTime = 10000 * Math.pow(2, attempt - 1);
+        console.log(`⏳ Retrying in ${waitTime / 1000}s (attempt ${attempt + 1}/${TRANSLATION_CONFIG.maxRetries})...`);
       }
 
-      if (attempt === retries) {
-        // Return a placeholder instead of throwing
-        console.log(`⚠️ Translation skipped after ${retries} attempts - storing original text`);
-        return `[Translation unavailable - rate limited]`;
-      }
-
-      // Other errors: shorter exponential backoff
-      const delay = Math.pow(2, attempt) * 10000; // 20s, 40s, 80s...
-      console.log(`⏳ Retrying in ${delay / 1000} seconds...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
 
-  return '[Translation failed]';
+  return '[TRANSLATION_FAILED]';
 }
 
 /**
