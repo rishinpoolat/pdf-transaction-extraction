@@ -7,6 +7,7 @@ import {
   getTransactionById,
   getPdfStatus,
   getPdfProgress,
+  getAllPdfs,
 } from '../controllers/transactions.controller';
 
 const router = Router();
@@ -16,6 +17,9 @@ router.use(isAuthenticated);
 
 // POST /api/transactions/upload - Upload and process PDF
 router.post('/upload', upload.single('pdf'), uploadPdf);
+
+// GET /api/transactions/pdfs - Get all PDFs
+router.get('/pdfs', getAllPdfs);
 
 // GET /api/transactions/status/:pdfId - Get PDF processing status
 router.get('/status/:pdfId', getPdfStatus);

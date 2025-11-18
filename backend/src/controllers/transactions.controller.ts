@@ -358,17 +358,26 @@ export async function getPdfProgress(
           return;
         }
 
+        // Determine the type based on processing status
+        let eventType = 'progress';
+        if (pdfRecord.processingStatus === 'completed') {
+          eventType = 'completed';
+        } else if (pdfRecord.processingStatus === 'failed') {
+          eventType = 'error';
+        }
+
         // Send progress update
         res.write(
           `data: ${JSON.stringify({
-            type: 'progress',
+            type: eventType,
             pdfId: pdfRecord.id,
             status: pdfRecord.processingStatus,
-            currentStep: pdfRecord.currentStep,
-            totalPages: pdfRecord.totalPages,
-            processedPages: pdfRecord.processedPages,
-            progressPercentage: pdfRecord.progressPercentage,
-            totalTransactions: pdfRecord.totalTransactions,
+            step: pdfRecord.currentStep || 'initializing',
+            totalPages: pdfRecord.totalPages || 0,
+            processedPages: pdfRecord.processedPages || 0,
+            progress: pdfRecord.progressPercentage || 0,
+            totalTransactions: pdfRecord.totalTransactions || 0,
+            error: pdfRecord.errorMessage,
           })}\n\n`
         );
 
@@ -377,13 +386,6 @@ export async function getPdfProgress(
           pdfRecord.processingStatus === 'completed' ||
           pdfRecord.processingStatus === 'failed'
         ) {
-          res.write(
-            `data: ${JSON.stringify({
-              type: 'complete',
-              status: pdfRecord.processingStatus,
-              errorMessage: pdfRecord.errorMessage,
-            })}\n\n`
-          );
           clearInterval(interval);
           res.end();
         }

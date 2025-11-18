@@ -3,12 +3,18 @@
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { uploadPdf } from "@/lib/actions/upload";
+import { PdfProgress } from "./pdf-progress";
 
-export function PdfUpload() {
+interface PdfUploadProps {
+  accessToken?: string;
+}
+
+export function PdfUpload({ accessToken }: PdfUploadProps = {}) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [processingPdfId, setProcessingPdfId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -111,14 +117,15 @@ export function PdfUpload() {
         throw new Error(result.error || "Upload failed");
       }
 
-      toast.success("PDF uploaded and processed successfully!");
+      toast.success("PDF uploaded successfully! Processing started...");
 
-      // Reset state
-      setFile(null);
-      setProgress(0);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      // Set the processing PDF ID to start tracking progress
+      if (result.data?.pdfId) {
+        setProcessingPdfId(result.data.pdfId);
       }
+
+      // Reset upload state but keep the file visible until processing completes
+      setProgress(0);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to upload PDF";
@@ -132,9 +139,22 @@ export function PdfUpload() {
   const handleRemoveFile = () => {
     setFile(null);
     setProgress(0);
+    setProcessingPdfId(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handleProcessingComplete = () => {
+    toast.success("PDF processing completed successfully!");
+    // Reset state after a short delay to show completion message
+    setTimeout(() => {
+      setFile(null);
+      setProcessingPdfId(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }, 2000);
   };
 
   return (
@@ -270,6 +290,20 @@ export function PdfUpload() {
               Upload and Process PDF
             </button>
           )}
+        </div>
+      )}
+
+      {/* Processing Progress */}
+      {processingPdfId && accessToken && (
+        <div className="mt-6">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+            Processing Progress
+          </h4>
+          <PdfProgress
+            pdfId={processingPdfId}
+            accessToken={accessToken}
+            onComplete={handleProcessingComplete}
+          />
         </div>
       )}
     </div>

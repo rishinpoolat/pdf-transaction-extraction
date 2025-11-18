@@ -74,12 +74,38 @@ export const transactions = pgTable(
     surveyNumberEnglish: varchar("survey_number_english", { length: 100 }),
     documentNumberEnglish: varchar("document_number_english", { length: 100 }),
 
+    // Document details
+    documentYear: varchar("document_year", { length: 10 }),
+    executionDate: varchar("execution_date", { length: 50 }),
+    presentationDate: varchar("presentation_date", { length: 50 }),
+    registrationDate: varchar("registration_date", { length: 50 }),
+    transactionNature: varchar("transaction_nature", { length: 100 }),
+
+    // Property details
+    plotNumberTamil: varchar("plot_number_tamil", { length: 100 }),
+    plotNumberEnglish: varchar("plot_number_english", { length: 100 }),
+    villageTamil: varchar("village_tamil", { length: 200 }),
+    villageEnglish: varchar("village_english", { length: 200 }),
+    streetTamil: varchar("street_tamil", { length: 200 }),
+    streetEnglish: varchar("street_english", { length: 200 }),
+    propertyType: varchar("property_type", { length: 100 }),
+    propertyExtent: varchar("property_extent", { length: 100 }),
+
+    // Financial
+    considerationValue: varchar("consideration_value", { length: 50 }),
+    marketValue: varchar("market_value", { length: 50 }),
+
+    // Reference
+    previousDocumentNumber: varchar("previous_document_number", { length: 200 }),
+    volumeNumber: varchar("volume_number", { length: 50 }),
+    pageNumberRef: varchar("page_number_ref", { length: 50 }),
+
     // Common fields
-    transactionDate: timestamp("transaction_date", { mode: "date" }),
+    transactionDate: varchar("transaction_date", { length: 50 }),
     transactionValue: decimal("transaction_value", { precision: 15, scale: 2 }),
 
     // Text content
-    originalText: text("original_text").notNull(),
+    originalText: text("original_text"),
     translatedText: text("translated_text"),
 
     // Metadata
