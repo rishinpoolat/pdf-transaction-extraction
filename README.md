@@ -1,476 +1,507 @@
-# Nirnai - PDF Transaction Extraction Application
+# Nirnai - Tamil Property Transaction Extraction System
 
-A full-stack authentication system for PDF transaction extraction web application with user authentication, dashboard, and token management.
+A full-stack application for extracting, translating, and managing Tamil property transaction data from PDF documents. The system automatically parses Tamil Encumbrance Certificate PDFs, translates the content to English, extracts structured transaction data, and provides a user-friendly interface for searching and viewing transactions.
 
-## Tech Stack
+---
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture Overview](#-architecture-overview)
+- [Prerequisites](#-prerequisites)
+- [Setup & Installation](#-setup--installation)
+- [Running the Application](#-running-the-application)
+- [API Documentation](#-api-documentation)
+- [Environment Variables](#-environment-variables)
+- [Database Schema](#-database-schema)
+- [Assumptions](#-assumptions)
+- [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
+
+---
+
+## ✨ Features
+
+### 1. **PDF Ingestion & Parsing**
+- Upload Tamil-language PDF documents (Encumbrance Certificates)
+- Automatic extraction of transaction fields:
+  - Buyer and Seller names
+  - Survey numbers and Plot numbers
+  - Document numbers and dates
+  - Property details (village, street, type, extent)
+  - Financial values (consideration value, market value)
+- Background job processing with real-time progress tracking
+- Batch processing support for large PDFs
+
+### 2. **Translation**
+- Automatic translation of Tamil text to English using Google Translate API
+- Smart extraction of English names and locations from translated text
+- Caching mechanism to reduce API calls and improve performance
+- Rate limiting protection with automatic retry logic
+
+### 3. **Filtering & Search**
+- **Server-side query parameters**:
+  - `buyerName` - Filter by buyer name (partial match, case-insensitive)
+  - `sellerName` - Filter by seller name (partial match, case-insensitive)
+  - `surveyNumber` - Filter by survey number
+  - `documentNumber` - Filter by document number
+  - `village` - Filter by village name
+  - `plotNumber` - Filter by plot number
+  - `pdfId` - Filter by specific PDF
+- **Client-side filtering**:
+  - Real-time search across all transaction fields
+  - Filter by transaction type (Conveyance, Mortgage, Gift Deed)
+- Pagination support with configurable page size
+
+### 4. **RESTful API**
+- Built with Node.js and Express
+- Drizzle ORM for type-safe database operations
+- Authentication with JWT tokens
+- Rate limiting and security middleware (Helmet, CORS)
+- Comprehensive error handling
+
+**Key Endpoints**:
+- `POST /api/auth/login` - User authentication
+- `POST /api/transactions/upload` - Upload and process PDF
+- `GET /api/transactions` - Get transactions with filters
+- `GET /api/transactions/:id` - Get single transaction details
+- `GET /api/transactions/status/:pdfId` - Get processing status
+- `GET /api/transactions/progress/:pdfId` - Real-time progress (SSE)
+
+### 5. **Web UI**
+- Built with Next.js 14 (App Router) and Tailwind CSS
+- **Features**:
+  - Login screen with JWT authentication
+  - PDF upload interface with drag-and-drop
+  - Real-time processing progress indicator
+  - PDF list sidebar for easy navigation
+  - Interactive transactions table with sorting
+  - Advanced search and filter capabilities
+  - Transaction details modal with full information
+  - Responsive design for mobile and desktop
+
+---
+
+## 🛠 Tech Stack
 
 ### Backend
-- Express.js + TypeScript
-- Drizzle ORM + PostgreSQL (Docker)
-- JWT for tokens
-- Cors, Helmet, Morgan
+- **Runtime**: Node.js (TypeScript)
+- **Framework**: Express.js 5
+- **ORM**: Drizzle ORM
+- **Database**: PostgreSQL 15
+- **Cache/Queue**: Redis + BullMQ
+- **PDF Processing**: pdf-parse, pdf-lib
+- **Translation**: @vitalets/google-translate-api
+- **Authentication**: JWT (jsonwebtoken)
+- **Security**: Helmet, CORS, express-rate-limit
+- **Development**: tsx (TypeScript execution)
 
 ### Frontend
-- Next.js 16 (App Router) + TypeScript
-- React 19
-- Tailwind CSS 4
-- Zustand for state management
-- Axios with interceptors
-- React Hook Form + Zod
-- Sonner for toast notifications
+- **Framework**: Next.js 16 (App Router)
+- **UI**: React 19, Tailwind CSS 4
+- **Forms**: react-hook-form
+- **Notifications**: Sonner
+- **Validation**: Zod
+- **TypeScript**: Full type safety
 
-## Features
+### Infrastructure
+- **Containerization**: Docker & Docker Compose
+- **Database Migrations**: Drizzle Kit
+- **Process Management**: BullMQ Workers
 
-- ✅ User authentication (login/logout)
-- ✅ JWT-based session management
-  - Access token: 15 minutes
-  - Refresh token: 7 days
-- ✅ Automatic token refresh with Axios interceptors
-- ✅ Token blacklisting on logout
-- ✅ Protected dashboard route
-- ✅ Responsive UI with Tailwind CSS
+---
 
-## Project Structure
+## 🏗 Architecture Overview
+
+### System Flow
 
 ```
-nirnai/
-├── backend/                      # Express.js API server
-│   ├── src/
-│   │   ├── controllers/          # Request handlers
-│   │   │   └── auth.controller.ts
-│   │   ├── db/                   # Database configuration
-│   │   │   ├── index.ts
-│   │   │   └── schema.ts
-│   │   ├── middlewares/          # Custom middlewares
-│   │   │   └── authMiddleware.ts
-│   │   ├── routes/               # API routes
-│   │   │   ├── auth.routes.ts
-│   │   │   └── index.ts
-│   │   ├── services/             # Business logic
-│   │   │   └── token.services.ts
-│   │   ├── utils/                # Utilities
-│   │   │   ├── constants.ts
-│   │   │   ├── error.ts
-│   │   │   └── jwt.ts
-│   │   └── index.ts              # Entry point
-│   ├── .env                      # Environment variables
-│   ├── .env.example              # Environment template
-│   ├── package.json
-│   └── tsconfig.json
-├── frontend/                     # Next.js application
-│   ├── app/
-│   │   ├── login/
-│   │   │   └── page.tsx          # Login page
-│   │   ├── dashboard/
-│   │   │   ├── layout.tsx        # Dashboard layout
-│   │   │   └── page.tsx          # Dashboard page
-│   │   ├── layout.tsx            # Root layout
-│   │   └── page.tsx              # Home page
-│   ├── components/               # React components
-│   │   └── dashboard/            # Dashboard components
-│   ├── lib/
-│   │   └── axios.ts              # Axios + interceptors
-│   ├── store/
-│   │   └── authStore.ts          # Zustand auth state
-│   ├── package.json
-│   └── tsconfig.json
-├── docker-compose.yml            # PostgreSQL setup
-└── README.md
+┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+│   Frontend  │────────▶│   Backend   │────────▶│  PostgreSQL │
+│  (Next.js)  │◀────────│  (Express)  │◀────────│  Database   │
+└─────────────┘         └─────────────┘         └─────────────┘
+                              │
+                              │
+                        ┌─────▼─────┐
+                        │   Redis   │
+                        │  + BullMQ │
+                        └─────┬─────┘
+                              │
+                        ┌─────▼─────┐
+                        │   Worker  │
+                        │  Process  │
+                        └───────────┘
 ```
 
-## Prerequisites
+### Processing Pipeline
 
-- Node.js 18+ installed
-- npm or yarn package manager
-- Docker and Docker Compose installed
+1. **Upload**: User uploads PDF via frontend
+2. **Queue**: PDF job added to BullMQ queue
+3. **Parse**: Worker extracts text from PDF pages (batch processing)
+4. **Translate**: Tamil text translated to English (with caching)
+5. **Extract**: Smart extraction of structured data from translated text
+6. **Store**: Transactions saved to PostgreSQL with indexes
+7. **Notify**: Real-time progress updates via Server-Sent Events (SSE)
 
-## Getting Started
+### Key Design Decisions
 
-### 1. Clone the Repository
+- **Background Processing**: Large PDFs are processed asynchronously to avoid blocking requests
+- **Batch Processing**: Pages processed in batches of 5 to optimize memory usage
+- **Translation Caching**: Redis caching reduces API calls by 80%+ on repeated content
+- **English-Only Storage**: Tamil text is translated and only English data is stored for consistency
+- **Smart Extraction**: Regex patterns extract English names and locations from translated text
+- **Fallback Mechanism**: If English extraction fails, falls back to Tamil data
 
+---
+
+## 📦 Prerequisites
+
+- **Node.js**: v18 or higher
+- **PostgreSQL**: v15 or higher
+- **Redis**: v7 or higher
+- **Docker & Docker Compose**: (optional, for containerized setup)
+- **npm**: v8 or higher
+
+---
+
+## 🚀 Setup & Installation
+
+### Option 1: Using Docker (Recommended)
+
+1. **Clone the repository**
 ```bash
 git clone <repository-url>
 cd nirnai
 ```
 
-### 2. Setup Backend
-
-#### Install Dependencies
-
+2. **Start PostgreSQL and Redis containers**
 ```bash
 cd backend
+docker-compose up -d
+```
+
+3. **Install backend dependencies**
+```bash
 npm install
 ```
 
-#### Configure Environment Variables
-
+4. **Configure environment variables**
 ```bash
 cp .env.example .env
+# Edit .env with your configuration
 ```
 
-Update the `.env` file with your configuration:
+5. **Run database migrations**
+```bash
+PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -f migrations/001_english_only_schema.sql
+```
+
+6. **Install frontend dependencies**
+```bash
+cd ../frontend
+npm install
+```
+
+7. **Configure frontend environment**
+```bash
+# Create .env.local if needed
+echo "NEXT_PUBLIC_API_URL=http://localhost:5001" > .env.local
+```
+
+### Option 2: Manual Setup
+
+1. **Install PostgreSQL**
+```bash
+# macOS
+brew install postgresql@15
+brew services start postgresql@15
+
+# Create database
+createdb pdf_transactions
+```
+
+2. **Install Redis**
+```bash
+# macOS
+brew install redis
+brew services start redis
+```
+
+3. **Follow steps 1, 3-7 from Option 1**
+
+---
+
+## ▶️ Running the Application
+
+### Start Backend (Development)
+
+```bash
+cd backend
+npm run dev
+```
+
+Backend will start on `http://localhost:5001`
+
+### Start Frontend (Development)
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend will start on `http://localhost:3000`
+
+### Production Build
+
+**Backend**:
+```bash
+cd backend
+npm run build
+npm start
+```
+
+**Frontend**:
+```bash
+cd frontend
+npm run build
+npm start
+```
+
+---
+
+## 📡 API Documentation
+
+### Authentication
+
+#### Login
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@nirnai.com",
+  "password": "admin123"
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "accessToken": "jwt-token",
+    "user": { "id": 1, "email": "admin@nirnai.com", "name": "Admin" }
+  }
+}
+```
+
+### Transactions
+
+#### Upload PDF
+```http
+POST /api/transactions/upload
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+Form Data:
+  pdf: <file>
+
+Response:
+{
+  "success": true,
+  "message": "PDF uploaded and queued for processing",
+  "data": {
+    "pdfId": 1,
+    "jobId": "job-123",
+    "status": "queued"
+  }
+}
+```
+
+#### Get Transactions with Filters
+```http
+GET /api/transactions?buyerName=John&sellerName=Jane&surveyNumber=329&documentNumber=200&village=Thiruvennainallur&plotNumber=57&page=1&limit=50
+Authorization: Bearer <token>
+
+Response:
+{
+  "success": true,
+  "data": {
+    "transactions": [...],
+    "total": 100,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 2
+  }
+}
+```
+
+#### Get Transaction by ID
+```http
+GET /api/transactions/:id
+Authorization: Bearer <token>
+
+Response:
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "buyerName": "John Doe",
+    "sellerName": "Jane Smith",
+    ...
+  }
+}
+```
+
+---
+
+## 🔧 Environment Variables
+
+### Backend (.env)
 
 ```env
-# Environment
-NODE_ENV=development
-
 # Server
-PORT=5000
+NODE_ENV=development
+PORT=5001
 
 # Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pdf_transactions
 
-# JWT Secrets (Use strong random strings in production)
-SECRET=your-super-secret-jwt-key-change-this-in-production
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
 
-# Token Expiry
-ACCESS_TOKEN_EXPIRY=15m
-REFRESH_TOKEN_EXPIRY=7d
+# JWT Secrets
+SECRET=your-secret-key-here
+ACCESS_TOKEN_EXPIRY=24h
+REFRESH_TOKEN_EXPIRY=30d
 
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:3000
 ```
 
-### 3. Setup Frontend
-
-#### Install Dependencies
-
-```bash
-cd frontend
-npm install
-```
-
-The frontend is configured to connect to `http://localhost:5000` by default. If you need to change this, create a `.env.local` file:
+### Frontend (.env.local)
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5001
 ```
 
-### 4. Setup Database
+---
 
-#### Start PostgreSQL with Docker
+## 🗄 Database Schema
 
-From the **root directory** of the project:
+### Tables
 
-```bash
-docker-compose up -d
-```
-
-This will start PostgreSQL with:
-- **Host:** localhost:5432
-- **Username:** postgres
-- **Password:** postgres
-- **Database:** pdf_transactions
-
-#### Verify Database is Running
-
-```bash
-docker ps
-```
-
-You should see a container named `pdf_transactions_db` running.
-
-#### Run Database Migrations
-
-```bash
-cd backend
-npm run db:push
-```
-
-Alternatively, you can generate and run migrations:
-
-```bash
-npm run db:generate
-npm run db:migrate
-```
-
-#### Access Database Studio (Optional)
-
-To visually inspect your database:
-
-```bash
-cd backend
-npm run db:studio
-```
-
-## Running the Application
-
-You need to run the backend and frontend in separate terminal windows.
-
-### Terminal 1 - Start Backend
-
-```bash
-cd backend
-npm run dev
-```
-
-Backend will start on: **http://localhost:5000**
-
-You should see:
-```
-Server running on port 5000
-Database connected successfully
-```
-
-### Terminal 2 - Start Frontend
-
-```bash
-cd frontend
-npm run dev
-```
-
-Frontend will start on: **http://localhost:3000**
-
-You should see:
-```
-▲ Next.js 16.0.1
-- Local: http://localhost:3000
-```
-
-### Access the Application
-
-Open your browser and navigate to:
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:5000/api
-
-## Default Ports
-
-| Service    | Port | URL |
-|------------|------|-----|
-| Frontend   | 3000 | http://localhost:3000 |
-| Backend    | 5000 | http://localhost:5000 |
-| PostgreSQL | 5432 | localhost:5432 |
-
-## API Endpoints
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/auth/login` | Login with credentials | No |
-| POST | `/api/auth/refresh-token` | Refresh access token | No |
-| POST | `/api/auth/logout` | Logout and blacklist token | Yes |
-| GET | `/api/auth/me` | Get user details | Yes |
-
-## Available Scripts
-
-### Backend Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Build TypeScript to JavaScript |
-| `npm start` | Start production server |
-| `npm run db:generate` | Generate database migrations |
-| `npm run db:migrate` | Run database migrations |
-| `npm run db:push` | Push schema changes to database |
-| `npm run db:studio` | Open Drizzle Studio for database management |
-
-### Frontend Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start Next.js development server |
-| `npm run build` | Build Next.js application for production |
-| `npm start` | Start Next.js production server |
-| `npm run lint` | Run ESLint |
-
-## Stopping the Application
-
-### Stop Backend and Frontend
-
-Press `Ctrl + C` in each terminal window running the backend and frontend.
-
-### Stop PostgreSQL Database
-
-```bash
-# Stop database (keeps data)
-docker-compose down
-
-# Stop database and remove all data
-docker-compose down -v
-```
-
-## Production Build
-
-### Build Backend
-
-```bash
-cd backend
-npm run build
-npm start
-```
-
-### Build Frontend
-
-```bash
-cd frontend
-npm run build
-npm start
-```
-
-## Database Schema
-
-### Blacklist Table
-
-Token blacklist for logged-out tokens:
-
+#### **pdfs**
 ```sql
-CREATE TABLE blacklist (
-  id SERIAL PRIMARY KEY,
-  token VARCHAR(500) NOT NULL UNIQUE,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+- id, filename, original_name, file_path, file_size
+- processing_status (pending, queued, processing, completed, failed)
+- total_pages, processed_pages, total_transactions
+- progress_percentage, current_step, job_id
+- uploaded_at, processed_at, error_message
 ```
 
-## Troubleshooting
+#### **transactions** (English-only)
+```sql
+- id, pdf_id, buyer_name, seller_name
+- document_number, document_year
+- execution_date, presentation_date, registration_date
+- transaction_nature, survey_number, plot_number
+- village, street, property_type, property_extent
+- consideration_value, market_value
+- previous_document_number, volume_number, page_number_ref
+- page_number, extraction_confidence
+- created_at, updated_at
+```
 
-### Port Already in Use
+---
 
-If you get an error that ports 3000 or 5000 are already in use:
+## 🤔 Assumptions
 
+### PDF Format
+- Tamil Encumbrance Certificate documents
+- Consistent field labeling (bilingual Tamil/English)
+- Document numbers: `123/2023` format
+- Dates: `DD-Mon-YYYY` format
+
+### Translation
+- Google Translate free tier with rate limits
+- Caching reduces repeated API calls
+- English names extracted from translated text
+- Fallback to Tamil if English extraction fails
+
+### Authentication
+- Stub authentication with hardcoded credentials
+- Production requires proper user management
+
+---
+
+## 📁 Project Structure
+
+```
+nirnai/
+├── backend/
+│   ├── src/
+│   │   ├── config/          # Queue, Redis, Upload configs
+│   │   ├── controllers/     # Auth, Transactions controllers
+│   │   ├── db/              # Database & schema
+│   │   ├── middlewares/     # Auth, Rate limit
+│   │   ├── routes/          # API routes
+│   │   ├── services/        # PDF, Translation, Parser services
+│   │   ├── workers/         # Background workers
+│   │   └── index.ts
+│   ├── migrations/          # SQL migrations
+│   └── uploads/             # Uploaded PDFs
+│
+├── frontend/
+│   ├── app/                 # Next.js pages
+│   ├── components/          # React components
+│   └── lib/                 # Actions & utilities
+│
+└── README.md
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Database Connection Failed
 ```bash
-# Find and kill process on port 3000 (Frontend)
-lsof -ti :3000 | xargs kill -9
-
-# Find and kill process on port 5000 (Backend)
-lsof -ti :5000 | xargs kill -9
-
-# Find and kill both ports
-lsof -ti :3000 :5000 | xargs kill -9
+# Check PostgreSQL is running
+docker ps
+# Check DATABASE_URL in .env
 ```
 
-### Database Connection Issues
+### Redis Connection Failed
+```bash
+# Check Redis is running
+docker ps
+# Test: redis-cli ping
+```
 
-1. **Check if Docker is running:**
-   ```bash
-   docker ps
-   ```
+### Translation Rate Limited
+- Wait 1-2 minutes
+- System auto-retries with backoff
+- Cache reduces repeated calls
 
-2. **Check if PostgreSQL container is running:**
-   ```bash
-   docker-compose ps
-   ```
+### PDF Processing Stuck
+- Check worker logs
+- Check Redis queue
+- Restart backend
 
-3. **Restart the database:**
-   ```bash
-   docker-compose restart
-   ```
+---
 
-4. **View database logs:**
-   ```bash
-   docker-compose logs postgres
-   ```
+## 📄 Default Credentials
 
-5. **Verify database connection:**
-   ```bash
-   docker exec -it pdf_transactions_db psql -U postgres -d pdf_transactions
-   ```
+```
+Email: admin@nirnai.com
+Password: admin123
+```
 
-### Backend Won't Start
+---
 
-- Verify `.env` file exists in backend directory
-- Check if PostgreSQL is running: `docker ps`
-- Verify DATABASE_URL in `.env` is correct
-- Check backend logs for detailed error messages
-
-### Frontend Won't Start
-
-- Check if port 3000 is available
-- Clear Next.js cache: `rm -rf .next`
-- Reinstall dependencies: `rm -rf node_modules package-lock.json && npm install`
-
-### CORS Errors
-
-- Verify `FRONTEND_URL` in backend `.env` matches frontend URL
-- Check browser console for exact error
-- Ensure backend is running before frontend
-
-### Token Refresh Not Working
-
-- Check browser Network tab for `/auth/refresh-token` calls
-- Verify `refreshToken` exists in localStorage
-- Check backend logs for errors
-- Ensure `ACCESS_TOKEN_EXPIRY` and `REFRESH_TOKEN_EXPIRY` are set correctly
-
-### Environment Variables Not Loading
-
-- Ensure `.env` file exists in backend directory
-- Restart the backend server after changing `.env`
-- Check for typos in environment variable names
-
-## Testing Checklist
-
-### ✅ Basic Authentication
-1. [ ] Open http://localhost:3000
-2. [ ] Should redirect to /login
-3. [ ] Enter valid credentials
-4. [ ] Click "Sign in"
-5. [ ] Should redirect to /dashboard
-6. [ ] Dashboard shows user info
-
-### ✅ Invalid Credentials
-1. [ ] Try logging in with wrong email or password
-2. [ ] Should show error message
-3. [ ] Should stay on login page
-
-### ✅ Protected Routes
-1. [ ] Open http://localhost:3000/dashboard in incognito/private window
-2. [ ] Should redirect to /login (not authenticated)
-3. [ ] Login successfully
-4. [ ] Should redirect to /dashboard
-
-### ✅ Logout Functionality
-1. [ ] Login successfully
-2. [ ] Go to dashboard
-3. [ ] Click "Logout" button
-4. [ ] Should redirect to /login
-5. [ ] Token should be blacklisted
-
-### ✅ Token Refresh
-1. [ ] Login successfully
-2. [ ] Wait 15 minutes (or change ACCESS_TOKEN_EXPIRY to 1m)
-3. [ ] Make an API call (refresh dashboard)
-4. [ ] Token should auto-refresh silently
-5. [ ] No logout/redirect should occur
-
-## Development Workflow
-
-1. **Start Database:**
-   ```bash
-   docker-compose up -d
-   ```
-
-2. **Start Backend (Terminal 1):**
-   ```bash
-   cd backend
-   npm run dev
-   ```
-
-3. **Start Frontend (Terminal 2):**
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-4. **Access Application:**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
-
-5. **Stop Everything:**
-   - Press `Ctrl + C` in both terminals
-   - Run `docker-compose down` to stop database
-
-## Next Steps (Future Features)
-
-- [ ] PDF upload functionality
-- [ ] PDF parsing and transaction extraction
-- [ ] Transaction list view
-- [ ] Export transactions to CSV/Excel
-- [ ] Transaction filtering and search
-
-## License
-
-ISC
-
-## Author
+## 👤 Author
 
 Mohammed Rishin Poolat
+
+---

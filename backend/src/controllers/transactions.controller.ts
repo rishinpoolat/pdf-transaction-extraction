@@ -4,7 +4,7 @@ import { savePdfFile } from '../services/pdf.service';
 import { pdfProcessingQueue } from '../config/queue.config';
 import { db } from '../db';
 import { pdfs, transactions } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 
 /**
  * Upload and process PDF file
@@ -98,7 +98,7 @@ export async function uploadPdf(
 
 /**
  * Get all transactions with optional filters
- * GET /api/transactions?pdfId=1&page=1&limit=50
+ * GET /api/transactions?pdfId=1&page=1&limit=50&buyerName=John&sellerName=Jane&surveyNumber=123&documentNumber=456
  */
 export async function getTransactions(
   req: Request,
@@ -106,7 +106,17 @@ export async function getTransactions(
   next: NextFunction
 ) {
   try {
-    const { pdfId, page = '1', limit = '50' } = req.query;
+    const {
+      pdfId,
+      page = '1',
+      limit = '50',
+      buyerName,
+      sellerName,
+      surveyNumber,
+      documentNumber,
+      village,
+      plotNumber
+    } = req.query;
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
@@ -114,9 +124,47 @@ export async function getTransactions(
 
     let query = db.select().from(transactions);
 
+    // Build WHERE conditions
+    const conditions = [];
+
     // Filter by PDF ID if provided
     if (pdfId) {
-      query = query.where(eq(transactions.pdfId, parseInt(pdfId as string)));
+      conditions.push(eq(transactions.pdfId, parseInt(pdfId as string)));
+    }
+
+    // Filter by buyer name (case-insensitive partial match)
+    if (buyerName && typeof buyerName === 'string') {
+      conditions.push(sql`LOWER(${transactions.buyerName}) LIKE LOWER(${'%' + buyerName + '%'})`);
+    }
+
+    // Filter by seller name (case-insensitive partial match)
+    if (sellerName && typeof sellerName === 'string') {
+      conditions.push(sql`LOWER(${transactions.sellerName}) LIKE LOWER(${'%' + sellerName + '%'})`);
+    }
+
+    // Filter by survey number
+    if (surveyNumber && typeof surveyNumber === 'string') {
+      conditions.push(sql`${transactions.surveyNumber} LIKE ${'%' + surveyNumber + '%'}`);
+    }
+
+    // Filter by document number
+    if (documentNumber && typeof documentNumber === 'string') {
+      conditions.push(sql`${transactions.documentNumber} LIKE ${'%' + documentNumber + '%'}`);
+    }
+
+    // Filter by village (case-insensitive partial match)
+    if (village && typeof village === 'string') {
+      conditions.push(sql`LOWER(${transactions.village}) LIKE LOWER(${'%' + village + '%'})`);
+    }
+
+    // Filter by plot number
+    if (plotNumber && typeof plotNumber === 'string') {
+      conditions.push(sql`${transactions.plotNumber} LIKE ${'%' + plotNumber + '%'}`);
+    }
+
+    // Apply all conditions with AND
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
 
     // Get transactions with pagination
