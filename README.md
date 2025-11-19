@@ -4,22 +4,6 @@ A full-stack application for extracting, translating, and managing Tamil propert
 
 ---
 
-## 📋 Table of Contents
-
-- [Quick Start](#-quick-start)
-- [Tech Stack & Libraries](#-tech-stack--libraries)
-- [Architecture Overview](#-architecture-overview)
-- [Setup & Installation](#-setup--installation)
-- [Running the Application](#-running-the-application)
-- [Features](#-features)
-- [API Documentation](#-api-documentation)
-- [Database Schema](#-database-schema)
-- [Assumptions & Limitations](#-assumptions--limitations)
-- [Project Structure](#-project-structure)
-- [Troubleshooting](#-troubleshooting)
-
----
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -65,526 +49,164 @@ npm run dev
 
 ---
 
-## 🛠 Tech Stack & Libraries
+## 🛠 Tech Stack
 
-### Technology Stack Overview
+### Frontend
+- **Framework**: Next.js 16.0.1 (React 19.2.0)
+- **Language**: TypeScript 5.x
+- **Styling**: Tailwind CSS 4.0
+- **Forms**: react-hook-form + Zod validation
+- **Notifications**: Sonner
 
-```
-Frontend:
-├─ Framework:      Next.js 16.0.1 (React 19.2.0)
-├─ Language:       TypeScript 5.x
-├─ Styling:        Tailwind CSS 4.0
-├─ Forms:          react-hook-form 7.66.0 + Zod 4.1.12
-├─ Notifications:  Sonner 2.0.7
-└─ State:          React Hooks (useState, useEffect)
-
-Backend:
-├─ Runtime:        Node.js v18+
-├─ Language:       TypeScript 5.9.3
-├─ Framework:      Express.js 5.1.0
-├─ Database:       PostgreSQL 15+
-├─ ORM:            Drizzle ORM 0.44.7
-├─ Cache/Queue:    Redis 7+ + BullMQ 5.63.2
-├─ Auth:           JWT (jsonwebtoken 9.0.2)
-├─ Security:       Helmet 8.1.0 + CORS 2.8.5
-├─ PDF:            pdf-parse 2.4.5 + pdf-lib 1.17.1
-├─ Translation:    @vitalets/google-translate-api 9.2.1
-├─ Validation:     Zod 4.1.12
-└─ File Upload:    Multer 2.0.2
-
-Infrastructure:
-├─ Database:       PostgreSQL 15 (Docker)
-├─ Cache:          Redis 7 (Docker)
-├─ Orchestration:  Docker Compose
-└─ Development:    tsx (TypeScript execution)
-```
+### Backend
+- **Runtime**: Node.js v18+
+- **Framework**: Express.js 5.1.0
+- **Database**: PostgreSQL 15+ (with Drizzle ORM)
+- **Cache/Queue**: Redis 7+ + BullMQ
+- **PDF Processing**: pdf-parse 2.4.5 + pdf-lib 1.17.1
+- **Translation**: @vitalets/google-translate-api 9.2.1
+- **Auth**: JWT (jsonwebtoken)
+- **Security**: Helmet + CORS + express-rate-limit
+- **File Upload**: Multer (max 50MB)
 
 ---
 
-### Backend Stack
+## 📄 PDF Processing: pdf-parse vs OCR
 
-| Layer | Technology | Version | Purpose | Limitations & Notes |
-|-------|-----------|---------|---------|-------------------|
-| **Runtime** | Node.js | v18+ | JavaScript runtime | - |
-| **Language** | TypeScript | 5.9.3 | Type safety | - |
-| **Framework** | Express.js | 5.1.0 | REST API server | - |
-| **Database** | PostgreSQL | 15+ | Relational database | Required for transactions |
-| **ORM** | Drizzle ORM | 0.44.7 | Type-safe database queries | - |
-| **Cache/Queue** | Redis + BullMQ | 5.8.2 / 5.63.2 | Job queue & caching | Required for background processing |
+### Why pdf-parse?
 
-#### Backend Libraries by Phase
+This application uses **pdf-parse** instead of OCR for the following reasons:
 
-**1. PDF Processing**
-- **pdf-parse** (2.4.5): Extract text from PDF pages
-  - *Limitation*: Cannot handle image-based/scanned PDFs (requires OCR)
-  - *Use case*: Text-based Tamil PDFs only
-- **pdf-lib** (1.17.1): PDF metadata extraction
-  - *Purpose*: Get page count, file info
+**pdf-parse (Text Extraction):**
+- Extracts embedded text directly from PDFs
+- **Fast** - no image processing required
+- **Accurate** - preserves exact text and Tamil Unicode perfectly
+- **Best for**: Digitally created PDFs (MS Word, government portals) where text is selectable
 
-**2. Translation**
-- **@vitalets/google-translate-api** (9.2.1): Free Tamil → English translation
-  - *Limitation*: **IP-based rate limiting** (~10-20 requests before 1-24h ban)
-  - *Mitigation*: 15s delays, Redis caching (30 days), exponential backoff
-  - *Production Alternative*: Google Cloud Translation API ($20 per 1M chars, ~$0.004/PDF)
-  - *Why chosen*: Free for development, easy integration
-  - *Risks*: Unreliable for production, unpredictable bans, slow processing
+**OCR (Optical Character Recognition):**
+- Reads text from images by converting pixels to text
+- **Slower** - requires image processing and ML models
+- **Less accurate** - especially for Tamil script
+- **Best for**: Scanned documents, photos, image-based PDFs
 
-**3. Data Parsing & Validation**
-- **Zod** (4.1.12): Schema validation
-  - *Purpose*: Validate API inputs, environment variables
+### When to Use Each Approach
 
-**4. Background Jobs**
-- **BullMQ** (5.63.2): Job queue management
-  - *Purpose*: Process PDFs asynchronously
-  - *Config*: 1 hour lock duration (due to slow translation)
-- **ioredis** (5.8.2): Redis client
-  - *Purpose*: Cache translations, job queue storage
+**Use pdf-parse (current approach)** if:
+- You can select and copy text from your PDFs
+- PDFs are generated from digital sources
+- You need fast, accurate extraction with proper Tamil encoding
 
-**5. Authentication & Security**
-- **jsonwebtoken** (9.0.2): JWT token generation/verification
-  - *Config*: Access token: 24h, Refresh token: 30d
-- **helmet** (8.1.0): Security headers
-- **cors** (2.8.5): Cross-origin requests
-- **express-rate-limit** (8.2.1): API rate limiting
+**Use OCR** if:
+- PDFs are scanned documents or images
+- Text is not selectable in the PDF
+- PDFs are photos of physical documents
 
-**6. File Handling**
-- **multer** (2.0.2): File upload middleware
-  - *Config*: PDF files only, max 50MB
+**Hybrid approach** (pdf-parse + OCR fallback):
+- Try pdf-parse first
+- If no text found or gibberish, fall back to OCR
+- Best for mixed document types
 
-**7. Utilities**
-- **dotenv** (17.2.3): Environment variables
-- **morgan** (1.10.1): HTTP request logging
-- **uuid** (13.0.0): Unique identifiers
-
----
-
-### Frontend Stack
-
-| Layer | Technology | Version | Purpose | Notes |
-|-------|-----------|---------|---------|-------|
-| **Framework** | Next.js | 16.0.1 | React framework with App Router | Server-side rendering, file-based routing |
-| **UI Library** | React | 19.2.0 | Component library | Latest stable with concurrent features |
-| **Language** | TypeScript | 5.x | Type safety | Full type coverage across components |
-| **Styling** | Tailwind CSS | 4.0 | Utility-first CSS framework | Just-in-Time compilation, custom design system |
-| **Forms** | react-hook-form | 7.66.0 | Form state management | Performant, uncontrolled components |
-| **Validation** | Zod | 4.1.12 | Schema validation | Shared schemas with backend for consistency |
-| **Notifications** | Sonner | 2.0.7 | Toast notifications | Accessible, customizable alerts |
-| **HTTP Client** | Fetch API | Native | API requests | Built-in, no external dependencies |
-
-#### Frontend Libraries by Feature
-
-**1. UI Framework & Routing**
-- **Next.js** (16.0.1): Full-stack React framework
-  - *Features*: App Router, Server Components, SSR, API routes
-  - *Why chosen*: Production-ready, excellent DX, built-in optimizations
-  - *Limitations*: Server components learning curve
-
-**2. Styling System**
-- **Tailwind CSS** (4.0): Utility-first CSS
-  - *Features*: Pre-built utilities, responsive design, custom configuration
-  - *Why chosen*: Fast development, consistent design, small bundle size
-  - *Config*: Custom colors, spacing, breakpoints
-
-**3. Form Management**
-- **react-hook-form** (7.66.0): Form state management
-  - *Features*: Uncontrolled inputs, validation, error handling
-  - *Why chosen*: Performance (minimal re-renders), easy integration with Zod
-  - *Use case*: Login form, PDF upload form
-
-**4. State Management**
-- **React Hooks** (useState, useEffect, useCallback): Local state
-  - *Features*: Built-in React state management
-  - *Why chosen*: Sufficient for simple app, no global state needed
-  - *Limitations*: Manual prop drilling for deeply nested components
-
-**5. Data Fetching**
-- **Server Actions** (Next.js): Server-side data mutations
-  - *Features*: Type-safe API calls, automatic revalidation
-  - *Why chosen*: Integrated with Next.js, simplified data flow
-  - *Use case*: Login, fetch transactions, upload PDF
-
-**6. UI Components**
-- **Custom Components**: Built from scratch
-  - *Features*: Modals, tables, sidebars, progress bars
-  - *Why chosen*: Full control, no dependency bloat
-  - *Alternative*: Could use shadcn/ui or Radix UI for production
-
----
-
-### Infrastructure
-
-| Component | Technology | Version | Purpose | Notes |
-|-----------|-----------|---------|---------|-------|
-| **Database** | PostgreSQL | 15+ | Primary data store | Docker container |
-| **Cache** | Redis | 7+ | Translation cache & job queue | Docker container |
-| **Job Processing** | BullMQ Workers | 5.63.2 | Background PDF processing | Runs in Node.js process |
-| **Containerization** | Docker Compose | - | Local development setup | PostgreSQL + Redis |
-
----
-
-## 🏗 Architecture Overview
-
-### Complete System Architecture
-
-```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                              CLIENT LAYER                                 │
-│                         Browser (http://localhost:3000)                   │
-└───────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ HTTP/HTTPS
-                                    ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│                           FRONTEND APPLICATION                            │
-│                          Next.js 16 + React 19                            │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────────┐ │
-│  │                         App Router (Pages)                          │ │
-│  │  ┌────────────┐  ┌────────────┐  ┌─────────────┐  ┌─────────────┐ │ │
-│  │  │ /login     │  │ /trans-    │  │ Components  │  │   Server    │ │ │
-│  │  │ page.tsx   │  │  actions   │  │  - Modals   │  │   Actions   │ │ │
-│  │  │            │  │ page.tsx   │  │  - Tables   │  │  (Auth,     │ │ │
-│  │  │            │  │            │  │  - Sidebar  │  │   Upload)   │ │ │
-│  │  └────────────┘  └────────────┘  └─────────────┘  └─────────────┘ │ │
-│  └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────────┐ │
-│  │                          UI Layer                                   │ │
-│  │  • Tailwind CSS 4.0 (Styling)                                      │ │
-│  │  • React Hook Form (Form State)                                    │ │
-│  │  • Zod (Validation)                                                │ │
-│  │  • Sonner (Toast Notifications)                                    │ │
-│  └─────────────────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ REST API (JSON)
-                                    │ Authorization: Bearer JWT
-                                    ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│                          BACKEND APPLICATION                              │
-│                    Express.js 5.1.0 + TypeScript 5.9.3                   │
-│                      (http://localhost:5001/api)                          │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────────┐ │
-│  │                      Middleware Layer                               │ │
-│  │  • CORS (Cross-Origin)  • Helmet (Security Headers)                │ │
-│  │  • Morgan (Logging)     • Express Rate Limit (API Protection)      │ │
-│  │  • JWT Auth Middleware  • Multer (File Upload - 50MB limit)        │ │
-│  └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────────┐ │
-│  │                         API Routes                                  │ │
-│  │  ┌──────────────────┐         ┌─────────────────────────────────┐  │ │
-│  │  │  /api/auth/*     │         │  /api/transactions/*            │  │ │
-│  │  │  - POST /login   │         │  - POST /upload                 │  │ │
-│  │  │  - GET  /me      │         │  - GET  / (with filters)        │  │ │
-│  │  │  - POST /logout  │         │  - GET  /:id                    │  │ │
-│  │  └──────────────────┘         │  - GET  /pdfs                   │  │ │
-│  │                                │  - GET  /progress/:pdfId (SSE)  │  │ │
-│  │                                └─────────────────────────────────┘  │ │
-│  └─────────────────────────────────────────────────────────────────────┘ │
-│                        │                                  │               │
-│                        ▼                                  ▼               │
-│  ┌──────────────────────────┐         ┌────────────────────────────────┐ │
-│  │   Auth Controller        │         │   Transactions Controller      │ │
-│  │  • Login (hardcoded)     │         │  • Upload PDF → Queue job      │ │
-│  │  • JWT generation        │         │  • Fetch with filters          │ │
-│  │  • Token blacklist       │         │  • SSE progress updates        │ │
-│  └──────────────────────────┘         └────────────────────────────────┘ │
-│              │                                        │                   │
-│              │                                        │                   │
-│  ┌───────────▼────────────────────────────────────────▼────────────────┐ │
-│  │                        Service Layer                                │ │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────────┐ │ │
-│  │  │ Token Service│  │ PDF Parser   │  │ Transaction Parser        │ │ │
-│  │  │ (JWT)        │  │ (pdf-parse)  │  │ (Regex extraction)        │ │ │
-│  │  └──────────────┘  └──────────────┘  └───────────────────────────┘ │ │
-│  │                    ┌──────────────┐                                 │ │
-│  │                    │ Translation  │                                 │ │
-│  │                    │ Service      │                                 │ │
-│  │                    │ (@vitalets)  │                                 │ │
-│  │                    └──────────────┘                                 │ │
-│  └─────────────────────────────────────────────────────────────────────┘ │
-│                                    │                                      │
-│  ┌─────────────────────────────────▼───────────────────────────────────┐ │
-│  │                         Data Access Layer                           │ │
-│  │                      Drizzle ORM 0.44.7                             │ │
-│  │  • Type-safe queries  • Schema definitions  • Migrations            │ │
-│  └─────────────────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────────────────┘
-         │                                              │
-         │                                              │
-         ▼                                              ▼
-┌──────────────────────┐                    ┌──────────────────────────────┐
-│   PostgreSQL 15+     │                    │      Redis 7+                │
-│   (Port: 5432)       │                    │    (Port: 6379)              │
-│                      │                    │                              │
-│  ┌────────────────┐  │                    │  ┌────────────────────────┐  │
-│  │ Tables:        │  │                    │  │ Uses:                  │  │
-│  │ • users        │  │                    │  │ • Translation cache    │  │
-│  │ • pdfs         │  │                    │  │   (30-day TTL)         │  │
-│  │ • transactions │  │                    │  │ • Token blacklist      │  │
-│  │                │  │                    │  │ • BullMQ job queue     │  │
-│  │ Indexes:       │  │                    │  │ • Session storage      │  │
-│  │ • buyer_name   │  │                    │  └────────────────────────┘  │
-│  │ • seller_name  │  │                    │                              │
-│  │ • survey_no    │  │                    └──────────────────────────────┘
-│  │ • village      │  │                                  │
-│  │ • document_no  │  │                                  │
-│  └────────────────┘  │                                  ▼
-│                      │                    ┌──────────────────────────────┐
-│  Docker Container    │                    │   BullMQ Queue Manager       │
-│  pdf_transactions_db │                    │                              │
-└──────────────────────┘                    │  Queue: pdf-processing       │
-                                            │  Concurrency: 1 job at a time│
-                                            │  Lock Duration: 1 hour       │
-                                            └──────────────────────────────┘
-                                                          │
-                                                          │ Job Dispatch
-                                                          ▼
-                                            ┌──────────────────────────────┐
-                                            │    WORKER PROCESS            │
-                                            │  (Background Job Processor)  │
-                                            │                              │
-                                            │  ┌────────────────────────┐  │
-                                            │  │ PDF Processing Worker  │  │
-                                            │  │                        │  │
-                                            │  │ 1. Extract metadata    │  │
-                                            │  │ 2. Parse pages (5/btch)│  │
-                                            │  │ 3. Translate Tamil→Eng │  │
-                                            │  │    (15s delays)        │  │
-                                            │  │ 4. Extract fields      │  │
-                                            │  │ 5. Save to PostgreSQL  │  │
-                                            │  │ 6. Update progress     │  │
-                                            │  └────────────────────────┘  │
-                                            │                              │
-                                            │  Libraries Used:             │
-                                            │  • pdf-parse (text extract)  │
-                                            │  • pdf-lib (metadata)        │
-                                            │  • @vitalets/translate       │
-                                            │  • Drizzle ORM (DB ops)      │
-                                            └──────────────────────────────┘
-                                                          │
-                                                          │ Updates
-                                                          ▼
-                                            ┌──────────────────────────────┐
-                                            │  External API                │
-                                            │  Google Translate (Free)     │
-                                            │                              │
-                                            │  Limitations:                │
-                                            │  • 10-20 req before IP ban   │
-                                            │  • 1-24h ban duration        │
-                                            │  • No SLA or guarantees      │
-                                            │                              │
-                                            │  Mitigation:                 │
-                                            │  • 15s delays                │
-                                            │  • Redis caching (30 days)   │
-                                            │  • Exponential backoff       │
-                                            └──────────────────────────────┘
-
-DEPLOYMENT ENVIRONMENT:
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Docker Compose (docker-compose.yml)                                   │
-│  ├─ Service: PostgreSQL 15 (pdf_transactions_db)                       │
-│  ├─ Service: Redis 7 (pdf_transactions_redis)                          │
-│  └─ Network: Bridge (containers can communicate)                       │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow: PDF Processing Pipeline
-
-```
-1. Upload PDF
-   ↓
-2. Create job in BullMQ queue → Store PDF metadata in DB
-   ↓
-3. Worker picks up job
-   ↓
-4. Extract PDF metadata (pages, size)
-   ↓
-5. Process pages in batches (5 pages at a time)
-   │
-   ├─→ Extract text from page (pdf-parse)
-   ├─→ Translate Tamil → English (Google Translate API)
-   │   └─→ Check Redis cache first (30-day TTL)
-   │   └─→ If not cached: API call with 15s delay
-   │   └─→ Store in cache
-   ├─→ Parse transaction fields (regex patterns)
-   │   └─→ Extract: names, dates, survey nos., etc.
-   └─→ Save to PostgreSQL
-   ↓
-6. Update progress in real-time (SSE)
-   ↓
-7. Mark job complete → Update PDF status
-```
-
-### Key Design Decisions
-
-1. **Background Processing**: Large PDFs processed asynchronously to avoid blocking API requests
-2. **Batch Processing**: Pages processed in batches of 5 to optimize memory usage
-3. **Translation Caching**: Redis caching reduces API calls by 80%+ on repeated content
-4. **English-Only Storage**: Tamil text is translated; only English data stored for consistency
-5. **Smart Extraction**: Regex patterns extract English names from translated text
-6. **Graceful Degradation**: Processing continues even if translation fails
-
----
-
-## 📦 Setup & Installation
-
-### Option 1: Docker Setup (Recommended)
-
-This is the easiest method for local development.
+### How to Test Your PDFs
 
 ```bash
-# 1. Clone repository
-git clone <repository-url>
-cd nirnai
+# Check if your PDF has embedded text
+# If you get readable output, pdf-parse will work
+pdftotext your-document.pdf -
 
-# 2. Navigate to backend
-cd backend
-
-# 3. Start PostgreSQL and Redis containers
-docker-compose up -d
-
-# Verify containers are running
-docker ps
-# You should see: pdf_transactions_db and pdf_transactions_redis
-
-# 4. Install backend dependencies
-npm install
-
-# 5. Configure environment variables
-cp .env.example .env
-
-# Edit .env (optional - defaults work for local development)
-# PORT=5001
-# DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pdf_transactions
-# REDIS_HOST=localhost
-# REDIS_PORT=6379
-```
-
-### Option 2: Manual Setup (Without Docker)
-
-If you prefer to install PostgreSQL and Redis manually:
-
-**Install PostgreSQL:**
-```bash
-# macOS
-brew install postgresql@15
-brew services start postgresql@15
-
-# Create database
-createdb pdf_transactions
-
-# Linux (Ubuntu/Debian)
-sudo apt install postgresql-15
-sudo systemctl start postgresql
-sudo -u postgres createdb pdf_transactions
-```
-
-**Install Redis:**
-```bash
-# macOS
-brew install redis
-brew services start redis
-
-# Linux (Ubuntu/Debian)
-sudo apt install redis-server
-sudo systemctl start redis
-```
-
-Then follow steps 4-5 from Option 1, and update `.env` with your database credentials.
-
----
-
-### Initialize Database Schema
-
-```bash
-# Make sure you're in the backend directory
-cd backend
-
-# Run schema migration
-PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -f migrations/schema.sql
-
-# Verify tables were created
-PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -c "\dt"
-# Should show: pdfs, transactions, users
+# Or open the PDF and try to select/copy text
+# If you can copy text → use pdf-parse
+# If text is not selectable → use OCR
 ```
 
 ---
 
-### Frontend Setup
+## ⚠️ Translation Rate Limiting & Solutions
 
+### Current Implementation
+
+The application uses **@vitalets/google-translate-api** (free, unofficial Google Translate API).
+
+**Known Limitations:**
+- **IP-based rate limiting**: ~10-20 requests before temporary ban
+- **Ban duration**: 1-24 hours (unpredictable)
+- **Processing speed**: 15-second delays required between requests
+- **Processing time**:
+  - Small PDF (10 pages): ~5 minutes
+  - Medium PDF (50 pages): ~25 minutes
+  - Large PDF (100 pages): ~50 minutes
+- **No SLA**: Free service, can break anytime
+
+### How We Mitigate Rate Limits
+
+1. **Redis Caching**: 30-day cache for translated text (reduces repeat API calls by 80%+)
+2. **Delays**: 15-second wait between translation requests
+3. **Exponential Backoff**: Automatic retry with 2min, 4min, 8min delays
+4. **Graceful Degradation**: Processing continues even if translation fails
+
+### Solutions for Production
+
+**Option 1: Google Cloud Translation API (Recommended)**
 ```bash
-# Navigate to frontend directory
-cd ../frontend
+# Pricing: $20 per 1 million characters
+# Average cost: ~$0.004 per PDF
+# Benefits: Fast, reliable, official API, no rate limits
 
-# Install dependencies
-npm install
-
-# Create environment file (optional)
-echo "NEXT_PUBLIC_API_URL=http://localhost:5001" > .env.local
+# Setup:
+# 1. Create Google Cloud account
+# 2. Enable Cloud Translation API
+# 3. Get API key
+# 4. Add to .env:
+GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
----
-
-## ▶️ Running the Application
-
-### Start Backend (Development)
-
+**Option 2: AWS Translate**
 ```bash
-cd backend
-
-# Start development server with hot reload
-npm run dev
+# Pricing: $15 per 1 million characters
+# Benefits: Good for AWS-hosted apps, pay-as-you-go
+# Setup: Similar to Google Cloud, requires AWS account
 ```
 
-**Expected output:**
-```
-🚀 Server running on port 5001
-✅ Database connected successfully
-✅ Redis connected successfully
-📦 Worker registered and listening for jobs
-```
-
-Backend will be available at: `http://localhost:5001`
-
----
-
-### Start Frontend (Development)
-
+**Option 3: Azure Translator**
 ```bash
-cd frontend
-
-# Start Next.js development server
-npm run dev
+# Pricing: $10 per 1 million characters
+# Benefits: Good for Microsoft stack, free tier available
+# Setup: Requires Azure account
 ```
 
-**Expected output:**
-```
-▲ Next.js 16.0.1
-- Local:        http://localhost:3000
-- Ready in 2.1s
-```
-
-Frontend will be available at: `http://localhost:3000`
-
----
-
-### Production Build
-
-**Backend:**
+**Option 4: DeepL API**
 ```bash
-cd backend
-npm run build      # Compile TypeScript to JavaScript
-npm start          # Run compiled code
+# Pricing: Higher than alternatives
+# Benefits: Best translation quality, especially for European languages
+# Note: Tamil support may be limited
 ```
 
-**Frontend:**
+**Option 5: Self-hosted Translation**
 ```bash
-cd frontend
-npm run build      # Build Next.js production bundle
-npm start          # Run production server
+# Use open-source models like:
+# - LibreTranslate (free, self-hosted)
+# - Opus-MT (multilingual translation)
+# Benefits: No external API dependency, no rate limits
+# Drawbacks: Requires GPU for good performance, lower quality
+```
+
+### Troubleshooting Rate Limits
+
+**If you hit rate limits:**
+
+1. **Wait it out**: Ban typically lifts in 1-24 hours
+2. **Change IP address**: Use VPN or different network
+3. **Re-upload same PDF**: Cached translations are reused (much faster)
+4. **Upgrade immediately**: Switch to paid API (recommended)
+
+**Check translation status:**
+```bash
+# View Redis cache
+redis-cli
+> KEYS translate:*
+> TTL translate:your-key
+
+# Check worker logs for rate limit errors
+# Look for: "Too Many Requests" or "429" errors
 ```
 
 ---
@@ -607,8 +229,7 @@ npm start          # Run production server
 - Smart extraction of English names and locations from translated text
 - Mixed English/Tamil text extraction (extracts English even when embedded in Tamil)
 - Redis caching mechanism (30-day TTL) to reduce API calls
-- Rate limiting protection with automatic retry logic (2min, 4min, 8min backoff)
-- **⚠️ Free API Limitations**: IP-based rate limiting (~10-20 requests before 1-24h ban)
+- Rate limiting protection with automatic retry logic
 
 ### 3. Filtering & Search
 **Server-side query parameters:**
@@ -799,52 +420,6 @@ data: {"step":"completed","progress":100}
 
 ---
 
-## 🔧 Environment Variables
-
-### Backend (.env)
-
-**Required Variables:**
-```env
-# Server
-NODE_ENV=development
-PORT=5001
-
-# Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pdf_transactions
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-
-# JWT Secrets (REQUIRED - Use strong random strings)
-# Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# Token Expiry
-ACCESS_TOKEN_EXPIRY=24h
-REFRESH_TOKEN_EXPIRY=30d
-
-# Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:3000
-```
-
-**Optional Variables:**
-```env
-# Optional: Google Cloud Translation API key for production
-# GOOGLE_CLOUD_API_KEY=your-api-key-here
-```
-
----
-
-### Frontend (.env.local)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5001
-```
-
----
-
 ## 🗄 Database Schema
 
 ### Table: `pdfs`
@@ -853,29 +428,22 @@ Stores uploaded PDF metadata and processing status.
 ```sql
 CREATE TABLE pdfs (
   id SERIAL PRIMARY KEY,
-  filename VARCHAR(255) NOT NULL,           -- Unique filename on server
-  original_name VARCHAR(255) NOT NULL,      -- Original upload name
-  file_path VARCHAR(500) NOT NULL,          -- Full path to PDF
-  file_size BIGINT,                         -- Size in bytes
-
-  -- Processing metadata
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size BIGINT,
   processing_status VARCHAR(50) DEFAULT 'pending',
-    -- Values: pending, queued, processing, completed, failed
   total_pages INT,
   processed_pages INT DEFAULT 0,
   total_transactions INT DEFAULT 0,
   progress_percentage INT DEFAULT 0,
   current_step VARCHAR(100),
   job_id VARCHAR(255),
-
-  -- Timestamps
   uploaded_at TIMESTAMP DEFAULT NOW(),
   processed_at TIMESTAMP,
   error_message TEXT
 );
 ```
-
----
 
 ### Table: `transactions`
 Stores extracted transaction data (English-only).
@@ -885,41 +453,25 @@ CREATE TABLE transactions (
   id SERIAL PRIMARY KEY,
   pdf_id INT REFERENCES pdfs(id) ON DELETE CASCADE,
   page_number INT,
-
-  -- Document details
   document_number VARCHAR(100),
   document_year VARCHAR(10),
-
-  -- Dates
   execution_date VARCHAR(50),
   presentation_date VARCHAR(50),
   registration_date VARCHAR(50),
-
-  -- Transaction type
   transaction_nature VARCHAR(100),
-
-  -- Parties (English names extracted from translated text)
   buyer_name VARCHAR(500),
   seller_name VARCHAR(500),
-
-  -- Property details
   survey_number VARCHAR(200),
   plot_number VARCHAR(200),
   village VARCHAR(200),
   street VARCHAR(200),
   property_type VARCHAR(100),
   property_extent VARCHAR(100),
-
-  -- Financial values
   consideration_value VARCHAR(50),
   market_value VARCHAR(50),
-
-  -- Reference information
   previous_document_number VARCHAR(200),
   volume_number VARCHAR(50),
   page_number_ref VARCHAR(50),
-
-  -- Metadata
   extraction_confidence VARCHAR(20),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -932,210 +484,6 @@ CREATE INDEX idx_transactions_seller_name ON transactions(seller_name);
 CREATE INDEX idx_transactions_survey_number ON transactions(survey_number);
 CREATE INDEX idx_transactions_document_number ON transactions(document_number);
 CREATE INDEX idx_transactions_village ON transactions(village);
-```
-
----
-
-## 🤔 Assumptions & Limitations
-
-### PDF Format Assumptions
-
-1. **Text-based PDFs Only**
-   - Assumption: PDFs contain selectable text (not scanned images)
-   - Limitation: Cannot process image-based/scanned PDFs without OCR
-   - Reason: pdf-parse library extracts text directly
-
-2. **Tamil Encumbrance Certificate Format**
-   - Assumption: Consistent field labeling (bilingual Tamil/English)
-   - Format: `Field Name / தமிழ் : Value`
-   - Example: `Survey No./புல எண் : 329, 330`
-
-3. **Document Number Format**
-   - Assumption: Format is `123/2023` (number/year)
-   - Pattern: `/(\d+)\/(\d{4})/`
-
-4. **Date Format**
-   - Assumption: Dates in `DD-Mon-YYYY` format (e.g., `06-Feb-2013`)
-   - Pattern: `/\d{2}-[A-Za-z]{3}-\d{4}/`
-
-5. **Field Structure**
-   - Assumption: Each transaction contains standard fields:
-     - Document number, dates (execution, presentation, registration)
-     - Parties: Executant (seller), Claimant (buyer)
-     - Property: Survey no., plot no., village, extent
-     - Financial: Consideration value, market value
-
----
-
-### Data Extraction Assumptions
-
-1. **English Name Extraction**
-   - Strategy: Extract from translated text first
-   - Fallback 1: Extract English words from mixed Tamil/English text
-   - Fallback 2: Use Tamil text if no English found
-   - Limitation: Translated names may not match official spelling
-
-2. **Number Extraction**
-   - Assumption: Numbers (survey, plot, document) work without translation
-   - Pattern: Extract digits, commas, slashes from mixed text
-   - Tamil Unicode removed: U+0B80 to U+0BFF range
-
-3. **Multiple Transactions Per Page**
-   - Assumption: Some pages contain multiple transactions
-   - Split pattern: Document number followed by date
-   - Minimum length: 100 characters for valid transaction
-
----
-
-### Translation Service Limitations
-
-**Current Implementation: @vitalets/google-translate-api**
-
-**Limitations:**
-1. **IP-based rate limiting**: ~10-20 requests before temporary ban (1-24 hours)
-2. **Unpredictable bans**: Ban duration varies, no official quota
-3. **Slow processing**: 15-second delays between requests (required to avoid bans)
-4. **Processing time**:
-   - Small PDF (10 pages): ~5 minutes
-   - Medium PDF (50 pages): ~25 minutes
-   - Large PDF (100 pages): ~50 minutes
-5. **Free API**: No SLA, no support, can break anytime
-
-**Why chosen:**
-- Free for development and testing
-- Easy integration, no API key required
-- Good translation quality (Google Translate backend)
-
-**Production recommendations:**
-- **Must upgrade** for production use
-- **Google Cloud Translation API**: $20 per 1M chars (~$0.004 per PDF)
-- **AWS Translate** or **Azure Translator**: Similar pricing
-- **DeepL API**: Higher quality, more expensive
-
-**Mitigations in place:**
-- 15-second delay between API calls
-- 30-day Redis caching (reduces repeat calls by 80%+)
-- Exponential backoff retry (2min, 4min, 8min)
-- Graceful degradation (processing continues on failure)
-
----
-
-### Authentication Assumptions
-
-1. **Stub Authentication**
-   - Current: Hardcoded credentials (`admin@nirnai.com` / `admin123`)
-   - Limitation: Single user, no registration, no password reset
-   - Production: Requires proper user management, database-backed auth
-
-2. **JWT Tokens**
-   - Access token: 24 hours (short-lived for security)
-   - Refresh token: 30 days (for seamless re-auth)
-   - Token blacklisting on logout (Redis-based)
-
----
-
-### PDF Layout Variations
-
-**Handled Cases:**
-- Bilingual field labels (Tamil + English)
-- Mixed English/Tamil in data fields
-- Multiple transactions per page
-- Varying number of parties (1-5 executants/claimants)
-- Optional fields (some transactions missing certain data)
-
-**Not Handled:**
-- Different certificate types (only Encumbrance Certificates)
-- Completely different layouts
-- Hand-written annotations
-- Rotated or skewed text
-- Image-based PDFs (scanned documents)
-
----
-
-## 📁 Project Structure
-
-```
-nirnai/
-├── backend/
-│   ├── src/
-│   │   ├── config/              # Configuration files
-│   │   │   ├── queue.config.ts  # BullMQ queue setup
-│   │   │   ├── redis.config.ts  # Redis connection
-│   │   │   └── upload.config.ts # Multer file upload
-│   │   │
-│   │   ├── controllers/         # Request handlers
-│   │   │   ├── auth.controller.ts
-│   │   │   └── transactions.controller.ts
-│   │   │
-│   │   ├── db/                  # Database
-│   │   │   ├── index.ts         # Drizzle connection
-│   │   │   └── schema.ts        # Table schemas
-│   │   │
-│   │   ├── middlewares/         # Express middlewares
-│   │   │   └── authMiddleware.ts
-│   │   │
-│   │   ├── routes/              # API routes
-│   │   │   ├── auth.routes.ts
-│   │   │   └── transactions.routes.ts
-│   │   │
-│   │   ├── services/            # Business logic
-│   │   │   ├── pdf-parser.service.ts       # Extract text from PDF
-│   │   │   ├── translation.service.ts      # Tamil → English
-│   │   │   ├── transaction-parser.service.ts # Regex field extraction
-│   │   │   └── token.services.ts
-│   │   │
-│   │   ├── validators/          # Zod schemas
-│   │   │   └── auth.validator.ts
-│   │   │
-│   │   ├── workers/             # Background workers
-│   │   │   └── pdf-processor.worker.ts
-│   │   │
-│   │   ├── utils/               # Utilities
-│   │   │   ├── jwt.ts
-│   │   │   └── constants.ts
-│   │   │
-│   │   └── index.ts             # Server entry point
-│   │
-│   ├── migrations/              # SQL migrations
-│   │   └── schema.sql           # Database schema
-│   │
-│   ├── uploads/                 # Uploaded PDFs (gitignored)
-│   │
-│   ├── docker-compose.yml       # PostgreSQL + Redis setup
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── .env.example
-│   └── README.md
-│
-├── frontend/
-│   ├── app/                     # Next.js App Router
-│   │   ├── login/
-│   │   │   └── page.tsx         # Login page
-│   │   ├── transactions/
-│   │   │   └── page.tsx         # Main transactions page
-│   │   ├── layout.tsx           # Root layout
-│   │   └── globals.css          # Global styles
-│   │
-│   ├── components/              # React components
-│   │   ├── transactions/
-│   │   │   ├── transactions-table.tsx    # Table with search/filter
-│   │   │   ├── transaction-details-modal.tsx
-│   │   │   ├── pdf-list-sidebar.tsx
-│   │   │   └── upload-pdf-modal.tsx
-│   │   └── ui/                  # Reusable UI components
-│   │
-│   ├── lib/                     # Utilities
-│   │   ├── actions/
-│   │   │   ├── auth.ts          # Auth actions
-│   │   │   └── transactions.ts  # Transaction actions
-│   │   └── utils.ts
-│   │
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tailwind.config.ts
-│   └── .env.local
-│
-└── README.md                    # This file
 ```
 
 ---
@@ -1158,8 +506,6 @@ docker logs pdf_transactions_db
 PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -c "SELECT 1"
 ```
 
----
-
 ### Redis Connection Failed
 ```bash
 # Check if Redis is running
@@ -1176,8 +522,6 @@ redis-cli ping
 docker logs pdf_transactions_redis
 ```
 
----
-
 ### Translation Rate Limited
 **Symptoms:**
 - Logs show "Too Many Requests" errors
@@ -1189,13 +533,6 @@ docker logs pdf_transactions_redis
 2. **Use different IP**: VPN or different network
 3. **Use cached data**: Re-upload same PDF (cache helps)
 4. **Upgrade to paid API**: Google Cloud Translation API (recommended for production)
-
-**Why it happens:**
-- Free Google Translate API has aggressive IP-based limits
-- ~10-20 requests before temporary ban
-- Sharing IP with others using Google Translate increases risk
-
----
 
 ### PDF Processing Stuck or Slow
 **Check worker logs:**
@@ -1224,18 +561,11 @@ cd backend
 npm run dev
 ```
 
----
-
 ### 401 Unauthorized Error
 **Possible causes:**
-1. Token expired (24h lifetime)
-   - Solution: Log in again to get new token
-2. Invalid token format
-   - Check `Authorization: Bearer <token>` header
-3. Token blacklisted (after logout)
-   - Log in again
-
----
+1. Token expired (24h lifetime) - Log in again
+2. Invalid token format - Check `Authorization: Bearer <token>` header
+3. Token blacklisted (after logout) - Log in again
 
 ### Port Already in Use
 ```bash
@@ -1252,18 +582,6 @@ PORT=5002
 
 ---
 
-### TypeScript Errors After npm install
-```bash
-# Clear node_modules and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Rebuild TypeScript
-npm run build
-```
-
----
-
 ## 📄 License
 
 ISC
@@ -1273,12 +591,3 @@ ISC
 ## 👤 Author
 
 Mohammed Rishin Poolat
-
----
-
-## 🙏 Acknowledgments
-
-- **Google Translate API**: For free translation service (with limitations)
-- **Drizzle ORM**: For excellent TypeScript-first ORM
-- **BullMQ**: For robust job queue management
-- **Next.js Team**: For amazing React framework
