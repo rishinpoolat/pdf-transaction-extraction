@@ -22,7 +22,7 @@ cp .env.example .env
 
 ```bash
 # Run database migrations
-PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -f migrations/001_english_only_schema.sql
+PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -f migrations/schema.sql
 
 # Start development server
 npm run dev
@@ -37,20 +37,24 @@ Server will start at: `http://localhost:5001`
 ### Test 1: Login 🔑
 
 **Create new request:**
+
 - Method: `POST`
 - URL: `http://localhost:5001/api/auth/login`
 - Headers:
   - `Content-Type: application/json`
 - Body (raw JSON):
+
 ```json
 {
-  "email": "admin@nirnai.com",
+  "email": "admin",
   "password": "admin123"
 }
 ```
+
 - Click **Send**
 
 **Expected response:**
+
 ```json
 {
   "success": true,
@@ -72,6 +76,7 @@ Server will start at: `http://localhost:5001`
 ### Test 2: Upload PDF 📄
 
 **Create new request:**
+
 - Method: `POST`
 - URL: `http://localhost:5001/api/transactions/upload`
 - Headers:
@@ -81,6 +86,7 @@ Server will start at: `http://localhost:5001`
 - Click **Send**
 
 **Expected response:**
+
 ```json
 {
   "success": true,
@@ -98,6 +104,7 @@ Server will start at: `http://localhost:5001`
 ### Test 3: Get Transactions 📋
 
 **Create new request:**
+
 - Method: `GET`
 - URL: `http://localhost:5001/api/transactions?pdfId=1&limit=50`
 - Headers:
@@ -105,6 +112,7 @@ Server will start at: `http://localhost:5001`
 - Click **Send**
 
 **Expected response:**
+
 ```json
 {
   "success": true,
@@ -123,6 +131,7 @@ Server will start at: `http://localhost:5001`
 ### Test 4: Get User Details 👤
 
 **Create new request:**
+
 - Method: `GET`
 - URL: `http://localhost:5001/api/auth/me`
 - Headers:
@@ -130,6 +139,7 @@ Server will start at: `http://localhost:5001`
 - Click **Send**
 
 **Expected response:**
+
 ```json
 {
   "message": "User details fetched successfully",
@@ -146,6 +156,7 @@ Server will start at: `http://localhost:5001`
 ### Test 5: Logout 🚪
 
 **Create new request:**
+
 - Method: `POST`
 - URL: `http://localhost:5001/api/auth/logout`
 - Headers:
@@ -159,9 +170,11 @@ Server will start at: `http://localhost:5001`
 ## 📋 All Available Endpoints
 
 ### Public Routes
+
 - `POST /api/auth/login` - Login with email/password
 
 ### Protected Routes (require Authorization header)
+
 - `GET /api/auth/me` - Get user details
 - `POST /api/auth/logout` - Logout
 - `POST /api/transactions/upload` - Upload PDF for processing
@@ -175,6 +188,7 @@ Server will start at: `http://localhost:5001`
 ## 🧪 Testing with cURL (Command Line Alternative)
 
 ### 1. Login
+
 ```bash
 curl -X POST http://localhost:5001/api/auth/login \
   -H "Content-Type: application/json" \
@@ -185,6 +199,7 @@ curl -X POST http://localhost:5001/api/auth/login \
 ```
 
 ### 2. Upload PDF
+
 ```bash
 curl -X POST http://localhost:5001/api/transactions/upload \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -192,6 +207,7 @@ curl -X POST http://localhost:5001/api/transactions/upload \
 ```
 
 ### 3. Get Transactions
+
 ```bash
 curl -X GET "http://localhost:5001/api/transactions?pdfId=1&limit=50" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
@@ -215,12 +231,14 @@ docker-compose down  # Stop PostgreSQL
 ## 🆘 Troubleshooting
 
 ### 401 Unauthorized?
+
 - Token may have expired
 - Login again to get new token
 - Check `Authorization: Bearer <token>` header format
 - Ensure using correct credentials: `admin@nirnai.com` / `admin123`
 
 ### Database connection failed?
+
 ```bash
 docker ps                    # Check if PostgreSQL is running
 docker-compose up -d         # Start PostgreSQL
@@ -228,6 +246,7 @@ docker logs pdf_transactions_db  # Check logs
 ```
 
 ### Redis connection failed?
+
 ```bash
 docker ps                    # Check if Redis is running
 docker-compose up -d         # Start Redis
@@ -235,11 +254,13 @@ docker logs pdf_transactions_redis  # Check logs
 ```
 
 ### Translation rate limited?
+
 - Your IP has hit Google Translate's rate limit
 - Wait 1-24 hours for ban to reset
 - Consider using Google Cloud Translation API for production
 
 ### PDF processing stuck or slow?
+
 - Check backend logs for errors
 - Translation delays: 15 seconds between requests (normal)
 - Large PDFs take time: ~1 minute per page without cache
@@ -288,6 +309,7 @@ The application uses **@vitalets/google-translate-api** for free Tamil to Englis
 ### ⚠️ Important Limitations & Risks
 
 #### Rate Limiting
+
 - **IP-based limits**: Google Translate's free API has aggressive rate limiting per IP address
 - **Typical limit**: ~10-20 requests before IP gets temporarily banned (1-24 hours)
 - **Current mitigation**:
@@ -297,12 +319,15 @@ The application uses **@vitalets/google-translate-api** for free Tamil to Englis
   - Translation skipped after 3 failed attempts (processing continues)
 
 #### When You Might Get Rate Limited
+
 - Processing multiple large PDFs in succession
 - Re-uploading PDFs that aren't cached
 - Sharing IP with other users of Google Translate
 
 #### What Happens When Rate Limited
+
 The system will:
+
 1. Wait and retry up to 3 times (with increasing delays)
 2. Log translation failures but continue processing
 3. Mixed English/Tamil fields will have English extracted when possible
@@ -312,32 +337,40 @@ The system will:
 For reliable production use, consider these alternatives:
 
 #### Option 1: Google Cloud Translation API (Recommended)
+
 **Setup:**
+
 1. Create Google Cloud account
 2. Enable Cloud Translation API
 3. Get API key from console
 4. Add to `.env`:
+
 ```env
 GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
 **Pricing:**
+
 - $20 per 1 million characters
 - Much higher rate limits
 - Enterprise-grade reliability
 
 **Estimated cost for this app:**
+
 - Average PDF: ~100 pages × 2000 chars/page = 200,000 chars
 - Cost per PDF: ~$0.004 (less than half a cent)
 - 1000 PDFs: ~$4
 
 #### Option 2: Azure Translator Text API
+
 Similar pricing and reliability to Google Cloud
 
 #### Option 3: AWS Translate
+
 Slightly cheaper but similar features
 
 #### Option 4: Self-hosted Translation
+
 - **LibreTranslate**: Open-source, self-hosted
 - **Argos Translate**: Offline translation
 - Requires more setup and resources
@@ -356,16 +389,19 @@ cacheExpiry: 30 days,          // Long-term caching
 ### 💡 Recommendations
 
 **Development/Testing:**
+
 - Use current free implementation with caution
 - Wait 24 hours for IP ban to reset if rate-limited
 - Consider using VPN or different IP if needed
 
 **Production:**
+
 - Upgrade to Google Cloud Translation API
 - Cost is negligible (~$0.004 per PDF)
 - Guaranteed reliability and no rate limits
 
 **High Volume (100+ PDFs/day):**
+
 - **Must use** paid API service
 - Free service will not handle this volume
 
