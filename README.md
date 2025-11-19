@@ -106,30 +106,43 @@ npm run dev
 │  └──────────────────────────┼───────────────────────────────┘  │
 └─────────────────────────────┼───────────────────────────────────┘
                               │
-              ┌───────────────┼───────────────┐
-              │               │               │
-              ▼               ▼               ▼
-    ┌─────────────┐  ┌──────────────┐  ┌─────────────┐
-    │ PostgreSQL  │  │    Redis     │  │   BullMQ    │
-    │   Database  │  │    Cache     │  │    Queue    │
-    │             │  │              │  │             │
-    │ • users     │  │ • Translated │  │ • PDF jobs  │
-    │ • pdfs      │  │   text cache │  │ • Progress  │
-    │ • trans-    │  │   (30 days)  │  │   tracking  │
-    │   actions   │  │ • Token      │  │             │
-    │             │  │   blacklist  │  │             │
-    └─────────────┘  └──────────────┘  └──────┬──────┘
-                                              │
-                                              │ Job Dispatch
-                                              ▼
-                                    ┌──────────────────┐
-                                    │  Worker Process  │
-                                    │                  │
-                                    │ 1. Extract PDF   │
-                                    │ 2. Translate     │
-                                    │ 3. Parse fields  │
-                                    │ 4. Save to DB    │
-                                    └──────────────────┘
+              ┌───────────────┴───────────────┐
+              │                               │
+              ▼                               ▼
+    ┌─────────────────┐          ┌────────────────────────────┐
+    │   PostgreSQL    │          │         Redis 7            │
+    │    Database     │          │   (localhost:6379)         │
+    │                 │          │                            │
+    │ • users         │          │  ┌──────────────────────┐  │
+    │ • pdfs          │          │  │   Translation Cache  │  │
+    │ • transactions  │          │  │   (30-day TTL)       │  │
+    │                 │          │  └──────────────────────┘  │
+    │ Indexes:        │          │                            │
+    │ • buyer_name    │          │  ┌──────────────────────┐  │
+    │ • seller_name   │          │  │   Token Blacklist    │  │
+    │ • survey_number │          │  └──────────────────────┘  │
+    │ • document_no   │          │                            │
+    │ • village       │          │  ┌──────────────────────┐  │
+    └─────────────────┘          │  │  BullMQ Job Queue    │  │
+                                 │  │  (pdf-processing)    │  │
+                                 │  │  • Job data          │  │
+                                 │  │  • Progress tracking │  │
+                                 │  │  • Retry logic       │  │
+                                 │  └──────────┬───────────┘  │
+                                 └─────────────┼──────────────┘
+                                               │
+                                               │ Job Dispatch
+                                               ▼
+                                     ┌──────────────────────┐
+                                     │   Worker Process     │
+                                     │   (BullMQ Worker)    │
+                                     │                      │
+                                     │ 1. Extract PDF       │
+                                     │ 2. Translate Tamil   │
+                                     │ 3. Parse fields      │
+                                     │ 4. Save to DB        │
+                                     │ 5. Update progress   │
+                                     └──────────────────────┘
 ```
 
 ### Data Flow: PDF Processing Pipeline
