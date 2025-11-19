@@ -46,7 +46,7 @@ Server will start at: `http://localhost:5001`
 
 ```json
 {
-  "email": "admin",
+  "email": "admin@nirnai.com",
   "password": "admin123"
 }
 ```

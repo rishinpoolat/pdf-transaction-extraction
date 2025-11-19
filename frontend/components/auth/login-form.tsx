@@ -93,7 +93,7 @@ export function LoginForm() {
           Demo Credentials
         </h3>
         <p className="text-sm text-gray-600 font-mono">
-          Email: <span className="text-gray-900">admin</span>
+          Email: <span className="text-gray-900">admin@nirnai.com</span>
         </p>
         <p className="text-sm text-gray-600 font-mono mt-1">
           Password: <span className="text-gray-900">admin123</span>
