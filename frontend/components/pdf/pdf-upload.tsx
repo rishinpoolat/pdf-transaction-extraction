@@ -9,6 +9,8 @@ interface PdfUploadProps {
   accessToken?: string;
 }
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
 export function PdfUpload({ accessToken }: PdfUploadProps = {}) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -17,9 +19,7 @@ export function PdfUpload({ accessToken }: PdfUploadProps = {}) {
   const [processingPdfId, setProcessingPdfId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     // Check file type
     if (file.type !== "application/pdf") {
       return "Please upload a PDF file only";
@@ -31,9 +31,9 @@ export function PdfUpload({ accessToken }: PdfUploadProps = {}) {
     }
 
     return null;
-  };
+  }, []);
 
-  const handleFile = (selectedFile: File) => {
+  const handleFile = useCallback((selectedFile: File) => {
     const error = validateFile(selectedFile);
     if (error) {
       toast.error(error);
@@ -42,7 +42,7 @@ export function PdfUpload({ accessToken }: PdfUploadProps = {}) {
 
     setFile(selectedFile);
     toast.success(`File selected: ${selectedFile.name}`);
-  };
+  }, [validateFile]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -70,7 +70,7 @@ export function PdfUpload({ accessToken }: PdfUploadProps = {}) {
     if (files && files.length > 0) {
       handleFile(files[0]);
     }
-  }, []);
+  }, [handleFile]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

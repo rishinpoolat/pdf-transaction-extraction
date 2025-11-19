@@ -7,18 +7,19 @@ interface TransactionDetailsModalProps {
   onClose: () => void;
 }
 
+// DetailRow component moved outside to avoid recreation on each render
+const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
+  <div className="grid grid-cols-3 gap-4 py-2 border-b border-gray-100">
+    <dt className="text-sm font-medium text-gray-500">{label}</dt>
+    <dd className="text-sm text-gray-900 col-span-2">{value || "-"}</dd>
+  </div>
+);
+
 export function TransactionDetailsModal({
   transaction,
   onClose,
 }: TransactionDetailsModalProps) {
   if (!transaction) return null;
-
-  const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
-    <div className="grid grid-cols-3 gap-4 py-2 border-b border-gray-100">
-      <dt className="text-sm font-medium text-gray-500">{label}</dt>
-      <dd className="text-sm text-gray-900 col-span-2">{value || "-"}</dd>
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

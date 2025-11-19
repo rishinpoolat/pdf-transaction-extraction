@@ -11,7 +11,7 @@ interface PdfProgressProps {
 
 export function PdfProgress({ pdfId, accessToken, onComplete }: PdfProgressProps) {
   const { progressData, isConnected, error } = usePdfProgress(pdfId, accessToken);
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => Date.now());
   const [elapsedTime, setElapsedTime] = useState(0);
 
   // Update elapsed time every second

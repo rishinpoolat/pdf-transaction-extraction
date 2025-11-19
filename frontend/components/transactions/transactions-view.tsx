@@ -1,33 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getAllPdfs, getTransactions, Transaction } from "@/lib/actions/transactions";
 import { PdfList } from "@/components/pdf";
 import { TransactionsTable } from "./transactions-table";
 import { TransactionDetailsModal } from "./transaction-details-modal";
 
+interface PdfItem {
+  id: number;
+  filename: string;
+  originalName: string;
+  processingStatus: string;
+  totalPages: number;
+  totalTransactions: number;
+  uploadedAt: string;
+}
+
 export function TransactionsView() {
-  const [pdfs, setPdfs] = useState<any[]>([]);
+  const [pdfs, setPdfs] = useState<PdfItem[]>([]);
   const [selectedPdfId, setSelectedPdfId] = useState<number | undefined>();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
 
-  // Load all PDFs on mount
-  useEffect(() => {
-    loadPdfs();
-  }, []);
-
-  // Load transactions when PDF is selected
-  useEffect(() => {
-    if (selectedPdfId) {
-      loadTransactions(selectedPdfId);
-    }
-  }, [selectedPdfId]);
-
-  const loadPdfs = async () => {
+  const loadPdfs = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getAllPdfs();
@@ -44,9 +42,14 @@ export function TransactionsView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPdfId]);
 
-  const loadTransactions = async (pdfId: number) => {
+  // Load all PDFs on mount
+  useEffect(() => {
+    loadPdfs();
+  }, [loadPdfs]);
+
+  const loadTransactions = useCallback(async (pdfId: number) => {
     try {
       setLoadingTransactions(true);
       const response = await getTransactions({ pdfId, limit: 1000 });
@@ -59,7 +62,14 @@ export function TransactionsView() {
     } finally {
       setLoadingTransactions(false);
     }
-  };
+  }, []);
+
+  // Load transactions when PDF is selected
+  useEffect(() => {
+    if (selectedPdfId) {
+      loadTransactions(selectedPdfId);
+    }
+  }, [selectedPdfId, loadTransactions]);
 
   const handleSelectPdf = (pdfId: number) => {
     setSelectedPdfId(pdfId);
@@ -76,13 +86,13 @@ export function TransactionsView() {
   // Refresh data when a new PDF is uploaded
   useEffect(() => {
     const handleRefresh = () => {
-      loadPdfs();
+      void loadPdfs();
     };
 
     // Listen for custom event from upload component
     window.addEventListener("pdf-uploaded", handleRefresh);
     return () => window.removeEventListener("pdf-uploaded", handleRefresh);
-  }, []);
+  }, [loadPdfs]);
 
   if (loading) {
     return (

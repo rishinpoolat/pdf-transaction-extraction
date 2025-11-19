@@ -164,16 +164,17 @@ export async function getTransactions(
 
     // Apply all conditions with AND
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = query.where(and(...conditions)) as typeof query;
     }
 
     // Get transactions with pagination
     const results = await query.limit(limitNum).offset(offset);
 
-    // Get total count
-    const totalQuery = pdfId
-      ? db.select().from(transactions).where(eq(transactions.pdfId, parseInt(pdfId as string)))
-      : db.select().from(transactions);
+    // Get total count - apply same filters
+    let totalQuery = db.select().from(transactions);
+    if (conditions.length > 0) {
+      totalQuery = totalQuery.where(and(...conditions)) as typeof totalQuery;
+    }
 
     const allResults = await totalQuery;
     const total = allResults.length;
@@ -238,7 +239,7 @@ export async function getTransactionById(
  * GET /api/transactions/pdfs
  */
 export async function getAllPdfs(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ) {

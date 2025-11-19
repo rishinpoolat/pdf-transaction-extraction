@@ -160,16 +160,37 @@ function extractSurveyNumber(text: string): string | undefined {
   // Pattern: Survey No./புல எண் : 329, 329/1, 330
   const surveyMatch = text.match(/Survey No\.\/புல எண்\s*:\s*([^\n]+)/);
   if (surveyMatch) {
-    return surveyMatch[1].trim();
+    const raw = surveyMatch[1].trim();
+    return cleanToEnglishOnly(raw);
   }
 
   // Alternative pattern from header
   const headerMatch = text.match(/Survey Details\s*\/சர்ேவ விவரம்\s*:\s*(\d+[\d,\/\s]*)/);
   if (headerMatch) {
-    return headerMatch[1].trim();
+    const raw = headerMatch[1].trim();
+    return cleanToEnglishOnly(raw);
   }
 
   return undefined;
+}
+
+/**
+ * Remove Tamil/non-English characters, keeping only numbers, commas, slashes, and basic punctuation
+ */
+function cleanToEnglishOnly(text: string): string {
+  // Remove Tamil Unicode characters (U+0B80 to U+0BFF)
+  let cleaned = text.replace(/[\u0B80-\u0BFF]/g, '');
+
+  // Keep only: numbers, comma, slash, hyphen, period, space
+  cleaned = cleaned.replace(/[^\d,\/\-.\s]/g, '');
+
+  // Clean up extra whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  // Remove trailing/leading punctuation
+  cleaned = cleaned.replace(/^[,\/\-.\s]+|[,\/\-.\s]+$/g, '');
+
+  return cleaned || undefined;
 }
 
 /**
@@ -179,7 +200,8 @@ function extractPlotNumber(text: string): string | undefined {
   // Pattern: Plot No./மைன எண் : 57
   const plotMatch = text.match(/Plot No\.\/மைன எண்\s*:\s*([^\n]+)/);
   if (plotMatch) {
-    return plotMatch[1].trim();
+    const raw = plotMatch[1].trim();
+    return cleanToEnglishOnly(raw);
   }
 
   return undefined;
