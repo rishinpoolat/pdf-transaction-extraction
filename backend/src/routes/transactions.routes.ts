@@ -8,6 +8,7 @@ import {
   getPdfStatus,
   getPdfProgress,
   getAllPdfs,
+  getPdfFile,
 } from '../controllers/transactions.controller';
 
 const router = Router();
@@ -26,6 +27,9 @@ router.get('/status/:pdfId', getPdfStatus);
 
 // GET /api/transactions/progress/:pdfId - Get real-time progress (SSE)
 router.get('/progress/:pdfId', getPdfProgress);
+
+// GET /api/transactions/pdf/:pdfId - Get PDF file for preview
+router.get('/pdf/:pdfId', getPdfFile);
 
 // GET /api/transactions - Get all transactions with optional filters
 router.get('/', getTransactions);
