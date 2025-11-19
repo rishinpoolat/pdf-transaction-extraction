@@ -166,3 +166,43 @@ export async function getAllPdfs(): Promise<{
     throw error;
   }
 }
+
+/**
+ * Server action to fetch PDF file as base64
+ * Returns base64 string that can be used in client components
+ */
+export async function getPdfFile(pdfId: number): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("accessToken")?.value;
+
+    if (!token) {
+      throw new Error("Not authenticated");
+    }
+
+    const url = `${API_URL}/transactions/pdf/${pdfId}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to fetch PDF: ${response.statusText}`);
+      return null;
+    }
+
+    // Convert to buffer then to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString("base64");
+
+    return `data:application/pdf;base64,${base64}`;
+  } catch (error) {
+    console.error("Get PDF file error:", error);
+    return null;
+  }
+}

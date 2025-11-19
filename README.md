@@ -368,6 +368,8 @@ redis-cli
 - PDF upload interface with drag-and-drop
 - Real-time processing progress indicator
 - PDF list sidebar for easy navigation
+- **PDF preview panel** with side-by-side view of PDF and transactions
+- Toggle to show/hide PDF preview
 - Interactive transactions table with sorting
 - Advanced search and filter capabilities
 - Transaction details modal with full information
@@ -518,6 +520,15 @@ Authorization: Bearer <token>
 Response: (Stream of events)
 data: {"step":"processing_pages","progress":25,"processedPages":25,"totalPages":100}
 data: {"step":"completed","progress":100}
+```
+
+#### Get PDF File for Preview
+```http
+GET /api/transactions/pdf/:pdfId
+Authorization: Bearer <token>
+
+Response: PDF file (application/pdf)
+Content-Disposition: inline; filename="document.pdf"
 ```
 
 ---

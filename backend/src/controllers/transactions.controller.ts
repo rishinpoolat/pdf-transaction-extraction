@@ -5,6 +5,7 @@ import { pdfProcessingQueue } from '../config/queue.config';
 import { db } from '../db';
 import { pdfs, transactions } from '../db/schema';
 import { eq, sql, and } from 'drizzle-orm';
+import fs from 'fs/promises';
 
 /**
  * Upload and process PDF file
@@ -456,6 +457,59 @@ export async function getPdfProgress(
         httpErrorCodes.INTERNAL_SERVER,
         'Failed to start progress stream'
       )
+    );
+  }
+}
+
+/**
+ * Get PDF file for preview
+ * GET /api/transactions/pdf/:pdfId
+ */
+export async function getPdfFile(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const pdfId = parseInt(req.params.pdfId);
+
+    if (isNaN(pdfId)) {
+      return next(errorHandler(httpErrorCodes.BAD_REQUEST, 'Invalid PDF ID'));
+    }
+
+    // Get PDF record from database
+    const [pdfRecord] = await db
+      .select()
+      .from(pdfs)
+      .where(eq(pdfs.id, pdfId));
+
+    if (!pdfRecord) {
+      return next(errorHandler(httpErrorCodes.NOT_FOUND, 'PDF not found'));
+    }
+
+    // Check if file exists
+    try {
+      await fs.access(pdfRecord.filePath);
+    } catch {
+      return next(
+        errorHandler(httpErrorCodes.NOT_FOUND, 'PDF file not found on disk')
+      );
+    }
+
+    // Set headers for PDF display
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${pdfRecord.originalName}"`
+    );
+
+    // Read and send the file
+    const fileBuffer = await fs.readFile(pdfRecord.filePath);
+    res.send(fileBuffer);
+  } catch (error) {
+    console.error('Error serving PDF file:', error);
+    return next(
+      errorHandler(httpErrorCodes.INTERNAL_SERVER, 'Failed to retrieve PDF file')
     );
   }
 }
