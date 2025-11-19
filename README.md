@@ -7,6 +7,7 @@ A full-stack application for extracting, translating, and managing Tamil propert
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js**: v18 or higher
 - **Docker & Docker Compose**: For PostgreSQL and Redis
 - **npm**: v8 or higher
@@ -44,6 +45,7 @@ npm run dev
 ```
 
 **Login Credentials:**
+
 - Email: `admin@nirnai.com`
 - Password: `admin123`
 
@@ -52,6 +54,7 @@ npm run dev
 ## 🛠 Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 16.0.1 (React 19.2.0)
 - **Language**: TypeScript 5.x
 - **Styling**: Tailwind CSS 4.0
@@ -59,6 +62,7 @@ npm run dev
 - **Notifications**: Sonner
 
 ### Backend
+
 - **Runtime**: Node.js v18+
 - **Framework**: Express.js 5.1.0
 - **Database**: PostgreSQL 15+ (with Drizzle ORM)
@@ -193,12 +197,14 @@ npm run dev
 This application uses **pdf-parse** instead of OCR for the following reasons:
 
 **pdf-parse (Text Extraction):**
+
 - Extracts embedded text directly from PDFs
 - **Fast** - no image processing required
 - **Accurate** - preserves exact text and Tamil Unicode perfectly
 - **Best for**: Digitally created PDFs (MS Word, government portals) where text is selectable
 
 **OCR (Optical Character Recognition):**
+
 - Reads text from images by converting pixels to text
 - **Slower** - requires image processing and ML models
 - **Less accurate** - especially for Tamil script
@@ -207,16 +213,19 @@ This application uses **pdf-parse** instead of OCR for the following reasons:
 ### When to Use Each Approach
 
 **Use pdf-parse (current approach)** if:
+
 - You can select and copy text from your PDFs
 - PDFs are generated from digital sources
 - You need fast, accurate extraction with proper Tamil encoding
 
 **Use OCR** if:
+
 - PDFs are scanned documents or images
 - Text is not selectable in the PDF
 - PDFs are photos of physical documents
 
 **Hybrid approach** (pdf-parse + OCR fallback):
+
 - Try pdf-parse first
 - If no text found or gibberish, fall back to OCR
 - Best for mixed document types
@@ -242,6 +251,7 @@ pdftotext your-document.pdf -
 The application uses **@vitalets/google-translate-api** (free, unofficial Google Translate API).
 
 **Known Limitations:**
+
 - **IP-based rate limiting**: ~10-20 requests before temporary ban
 - **Ban duration**: 1-24 hours (unpredictable)
 - **Processing speed**: 15-second delays required between requests
@@ -261,6 +271,7 @@ The application uses **@vitalets/google-translate-api** (free, unofficial Google
 ### Solutions for Production
 
 **Option 1: Google Cloud Translation API (Recommended)**
+
 ```bash
 # Pricing: $20 per 1 million characters
 # Average cost: ~$0.004 per PDF
@@ -275,6 +286,7 @@ GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
 **Option 2: AWS Translate**
+
 ```bash
 # Pricing: $15 per 1 million characters
 # Benefits: Good for AWS-hosted apps, pay-as-you-go
@@ -282,6 +294,7 @@ GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
 **Option 3: Azure Translator**
+
 ```bash
 # Pricing: $10 per 1 million characters
 # Benefits: Good for Microsoft stack, free tier available
@@ -289,6 +302,7 @@ GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
 **Option 4: DeepL API**
+
 ```bash
 # Pricing: Higher than alternatives
 # Benefits: Best translation quality, especially for European languages
@@ -296,6 +310,7 @@ GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
 **Option 5: Self-hosted Translation**
+
 ```bash
 # Use open-source models like:
 # - LibreTranslate (free, self-hosted)
@@ -314,6 +329,7 @@ GOOGLE_CLOUD_API_KEY=your-api-key-here
 4. **Upgrade immediately**: Switch to paid API (recommended)
 
 **Check translation status:**
+
 ```bash
 # View Redis cache
 redis-cli
@@ -329,6 +345,7 @@ redis-cli
 ## ✨ Features
 
 ### 1. PDF Ingestion & Parsing
+
 - Upload Tamil-language PDF documents (Encumbrance Certificates)
 - Automatic extraction of transaction fields:
   - Buyer and Seller names (English extracted from translated Tamil)
@@ -340,6 +357,7 @@ redis-cli
 - Batch processing support for large PDFs
 
 ### 2. Translation Service
+
 - Automatic translation of Tamil text to English using Google Translate API
 - Smart extraction of English names and locations from translated text
 - Mixed English/Tamil text extraction (extracts English even when embedded in Tamil)
@@ -347,7 +365,9 @@ redis-cli
 - Rate limiting protection with automatic retry logic
 
 ### 3. Filtering & Search
+
 **Server-side query parameters:**
+
 - `buyerName` - Filter by buyer name (partial match, case-insensitive)
 - `sellerName` - Filter by seller name (partial match, case-insensitive)
 - `surveyNumber` - Filter by survey number
@@ -357,26 +377,31 @@ redis-cli
 - `pdfId` - Filter by specific PDF
 
 **Client-side filtering:**
+
 - Real-time search across all transaction fields
 - Filter by transaction type (Conveyance, Mortgage, Gift Deed)
 
 **Sorting:**
+
 - Sort by date (execution/registration date)
 - Sort by document number
 - Ascending/descending toggle
 
 **Pagination:**
+
 - 20 items per page
 - First/Previous/Next/Last navigation
 - Page number quick jump
 
 ### 4. RESTful API
+
 - JWT-based authentication
 - Rate limiting and security middleware (Helmet, CORS)
 - Comprehensive error handling
 - Type-safe database operations (Drizzle ORM)
 
 ### 5. Web UI
+
 - Login screen with JWT authentication
 - PDF upload interface with drag-and-drop
 - Real-time processing progress indicator
@@ -397,6 +422,7 @@ Base URL: `http://localhost:5001`
 ### Authentication
 
 #### Login
+
 ```http
 POST /api/auth/login
 Content-Type: application/json
@@ -421,6 +447,7 @@ Response:
 ```
 
 #### Get User Details
+
 ```http
 GET /api/auth/me
 Authorization: Bearer <token>
@@ -437,6 +464,7 @@ Response:
 ```
 
 #### Logout
+
 ```http
 POST /api/auth/logout
 Authorization: Bearer <token>
@@ -449,6 +477,7 @@ Response: Token is blacklisted
 ### Transactions
 
 #### Upload PDF
+
 ```http
 POST /api/transactions/upload
 Authorization: Bearer <token>
@@ -470,6 +499,7 @@ Response:
 ```
 
 #### Get Transactions with Filters
+
 ```http
 GET /api/transactions?buyerName=John&sellerName=Jane&surveyNumber=329&page=1&limit=50
 Authorization: Bearer <token>
@@ -488,6 +518,7 @@ Response:
 ```
 
 #### Get Transaction by ID
+
 ```http
 GET /api/transactions/:id
 Authorization: Bearer <token>
@@ -505,6 +536,7 @@ Response:
 ```
 
 #### Get All Uploaded PDFs
+
 ```http
 GET /api/transactions/pdfs
 Authorization: Bearer <token>
@@ -526,6 +558,7 @@ Response:
 ```
 
 #### Get Processing Progress (Server-Sent Events)
+
 ```http
 GET /api/transactions/progress/:pdfId
 Authorization: Bearer <token>
@@ -536,6 +569,7 @@ data: {"step":"completed","progress":100}
 ```
 
 #### Get PDF File for Preview
+
 ```http
 GET /api/transactions/pdf/:pdfId
 Authorization: Bearer <token>
@@ -549,6 +583,7 @@ Content-Disposition: inline; filename="document.pdf"
 ## 🗄 Database Schema
 
 ### Table: `pdfs`
+
 Stores uploaded PDF metadata and processing status.
 
 ```sql
@@ -572,6 +607,7 @@ CREATE TABLE pdfs (
 ```
 
 ### Table: `transactions`
+
 Stores extracted transaction data (English-only).
 
 ```sql
@@ -617,6 +653,7 @@ CREATE INDEX idx_transactions_village ON transactions(village);
 ## 🐛 Troubleshooting
 
 ### Database Connection Failed
+
 ```bash
 # Check if PostgreSQL is running
 docker ps | grep pdf_transactions_db
@@ -632,6 +669,7 @@ PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -c "SELECT
 ```
 
 ### Redis Connection Failed
+
 ```bash
 # Check if Redis is running
 docker ps | grep pdf_transactions_redis
@@ -648,19 +686,24 @@ docker logs pdf_transactions_redis
 ```
 
 ### Translation Rate Limited
+
 **Symptoms:**
+
 - Logs show "Too Many Requests" errors
 - Jobs retry with 2min, 4min, 8min delays
 - Processing is very slow or stuck
 
 **Solutions:**
+
 1. **Wait it out**: Ban typically lasts 1-24 hours
 2. **Use different IP**: VPN or different network
 3. **Use cached data**: Re-upload same PDF (cache helps)
 4. **Upgrade to paid API**: Google Cloud Translation API (recommended for production)
 
 ### PDF Processing Stuck or Slow
+
 **Check worker logs:**
+
 ```bash
 # Backend terminal should show progress
 📄 Page 5/100 - Starting processing...
@@ -669,11 +712,13 @@ docker logs pdf_transactions_redis
 ```
 
 **Normal behavior:**
+
 - 15-second delays between translations (required)
 - ~1 minute per page on first upload
 - Faster on re-upload (cached translations)
 
 **If genuinely stuck:**
+
 ```bash
 # Check Redis queue
 redis-cli
@@ -687,12 +732,15 @@ npm run dev
 ```
 
 ### 401 Unauthorized Error
+
 **Possible causes:**
+
 1. Token expired (24h lifetime) - Log in again
 2. Invalid token format - Check `Authorization: Bearer <token>` header
 3. Token blacklisted (after logout) - Log in again
 
 ### Port Already in Use
+
 ```bash
 # Find process using port
 lsof -i :5001    # Backend
@@ -706,13 +754,3 @@ PORT=5002
 ```
 
 ---
-
-## 📄 License
-
-ISC
-
----
-
-## 👤 Author
-
-Mohammed Rishin Poolat
