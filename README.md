@@ -19,10 +19,10 @@ git clone <repository-url>
 cd nirnai
 
 # 2. Start Docker containers (PostgreSQL + Redis)
-cd backend
 docker-compose up -d
 
 # 3. Install backend dependencies
+cd backend
 npm install
 
 # 4. Configure environment
@@ -37,7 +37,7 @@ npm run dev
 # Backend runs at http://localhost:5001
 
 # 7. In a new terminal: Install and start frontend
-cd ../frontend
+cd frontend
 npm install
 npm run dev
 # Frontend runs at http://localhost:3000
@@ -608,8 +608,7 @@ CREATE INDEX idx_transactions_village ON transactions(village);
 # Check if PostgreSQL is running
 docker ps | grep pdf_transactions_db
 
-# If not running, start containers
-cd backend
+# If not running, start containers (from project root)
 docker-compose up -d
 
 # Check logs
@@ -624,7 +623,7 @@ PGPASSWORD=postgres psql -h localhost -U postgres -d pdf_transactions -c "SELECT
 # Check if Redis is running
 docker ps | grep pdf_transactions_redis
 
-# If not running
+# If not running (from project root)
 docker-compose up -d
 
 # Test Redis connection
