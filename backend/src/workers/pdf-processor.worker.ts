@@ -93,8 +93,8 @@ async function processPdfJob(job: Job<PdfProcessingJobData>) {
         console.log(`📋 Found ${transactionTexts.length} transactions on page ${page.pageNumber}`);
 
         // Translate page text (translate once for the whole page)
-        console.log(`🌐 Translating page ${page.pageNumber}...`);
         let translatedText = '';
+        console.log(`🌐 Translating page ${page.pageNumber}...`);
         try {
           translatedText = await translateText(page.text, (current, total) => {
             console.log(`  └─ Translating chunk ${current}/${total} for page ${page.pageNumber}`);
@@ -172,19 +172,21 @@ async function processPdfJob(job: Job<PdfProcessingJobData>) {
 
         console.log(`✅ Stored ${transactionTexts.length} transactions from page ${page.pageNumber}`);
         console.log(`📊 Total transactions so far: ${totalTransactions}`);
+
+        // Update progress after each page to keep job alive during long translation delays
+        processedPages++;
+        const pageProgress = Math.round((processedPages / metadata.totalPages) * 80);
+        await job.updateProgress({
+          step: 'processing_pages',
+          processedPages,
+          totalPages: metadata.totalPages,
+          totalTransactions,
+          progress: pageProgress,
+        });
       }
 
-      processedPages += pageBatch.length;
-
-      // Update job progress
+      // Progress is now updated after each page, not at batch level
       const overallProgress = Math.round((processedPages / metadata.totalPages) * 80);
-      await job.updateProgress({
-        step: 'processing_pages',
-        processedPages,
-        totalPages: metadata.totalPages,
-        totalTransactions,
-        progress: overallProgress,
-      });
 
       console.log(`\n${'━'.repeat(60)}`);
       console.log(`📊 Batch completed! Progress: ${overallProgress}% (${processedPages}/${metadata.totalPages} pages, ${totalTransactions} transactions)`);
@@ -256,11 +258,15 @@ async function processPdfJob(job: Job<PdfProcessingJobData>) {
 export function startPdfProcessingWorker() {
   const worker = new Worker<PdfProcessingJobData>(QUEUE_NAMES.PDF_PROCESSING, processPdfJob, {
     connection: createRedisConnection(),
-    concurrency: 2, // Process 2 PDFs concurrently
+    concurrency: 1, // Process 1 PDF at a time (to avoid overwhelming translation API)
     limiter: {
       max: 10, // Maximum 10 jobs
       duration: 60000, // per 60 seconds
     },
+    // Increase these to handle slow translation processing with delays
+    lockDuration: 3600000, // 1 hour - how long job can run before being considered stalled
+    stalledInterval: 300000, // 5 minutes - how often to check for stalled jobs
+    maxStalledCount: 3, // Allow job to be marked as stalled 3 times before failing
   });
 
   // Worker event listeners

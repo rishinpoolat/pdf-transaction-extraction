@@ -37,8 +37,10 @@ A full-stack application for extracting, translating, and managing Tamil propert
 ### 2. **Translation**
 - Automatic translation of Tamil text to English using Google Translate API
 - Smart extraction of English names and locations from translated text
-- Caching mechanism to reduce API calls and improve performance
+- Mixed English/Tamil text extraction (extracts English even when embedded in Tamil)
+- Caching mechanism to reduce API calls and improve performance (30-day cache)
 - Rate limiting protection with automatic retry logic
+- **⚠️ Free API Limitations**: IP-based rate limiting (~10-20 requests before temporary ban)
 
 ### 3. **Filtering & Search**
 - **Server-side query parameters**:
@@ -52,7 +54,11 @@ A full-stack application for extracting, translating, and managing Tamil propert
 - **Client-side filtering**:
   - Real-time search across all transaction fields
   - Filter by transaction type (Conveyance, Mortgage, Gift Deed)
-- Pagination support with configurable page size
+- **Sorting**:
+  - Sort by date (execution/registration date)
+  - Sort by document number
+  - Ascending/descending toggle
+- Pagination support (20 items per page)
 
 ### 4. **RESTful API**
 - Built with Node.js and Express
@@ -378,6 +384,9 @@ REFRESH_TOKEN_EXPIRY=30d
 
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:3000
+
+# Optional: Google Cloud Translation API key for production
+# GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
 ### Frontend (.env.local)
@@ -416,6 +425,82 @@ NEXT_PUBLIC_API_URL=http://localhost:5001
 
 ---
 
+## 🌐 Translation Service - Important Information
+
+### Current Implementation
+
+The application uses **@vitalets/google-translate-api** - a free, community-maintained library that wraps Google Translate's web interface.
+
+### ⚠️ Critical Limitations
+
+#### Rate Limiting (Most Important)
+- **IP-based blocking**: Google Translate's free API has aggressive rate limiting
+- **Typical limit**: ~10-20 translation requests before your IP gets temporarily banned
+- **Ban duration**: Usually 1-24 hours
+- **When it happens**:
+  - Processing multiple PDFs
+  - Re-uploading same PDF without cache
+  - Other apps/users on same IP using Google Translate
+
+#### Current Mitigations
+The system includes several protections:
+- ✅ **15-second delay** between translation API calls
+- ✅ **30-day caching** in Redis (avoids re-translating same content)
+- ✅ **Automatic retry** with exponential backoff (2min, 4min, 8min)
+- ✅ **Graceful degradation**: Logs translation failures but continues processing
+- ✅ **Mixed text extraction**: Extracts English from Tamil/English mixed fields
+- ✅ **Processing continues**: System extracts available data even if translation fails
+
+### 🚀 Production-Ready Alternatives
+
+For **reliable production use** or **high volume** (100+ PDFs/day), you **must** use a paid service:
+
+#### Recommended: Google Cloud Translation API
+**Why:**
+- No rate limits
+- Enterprise reliability
+- Same Google Translate quality
+- Extremely affordable
+
+**Cost:**
+- $20 per 1 million characters
+- Average PDF (100 pages): ~$0.004 (less than half a cent)
+- 1000 PDFs: ~$4
+
+**Setup:**
+1. Create [Google Cloud account](https://console.cloud.google.com)
+2. Enable Cloud Translation API
+3. Get API key
+4. Add to `.env`: `GOOGLE_CLOUD_API_KEY=your-key`
+
+#### Alternatives:
+- **Azure Translator**: Similar pricing, Microsoft ecosystem
+- **AWS Translate**: Slightly cheaper, AWS integration
+- **DeepL API**: Higher quality, more expensive
+- **LibreTranslate**: Self-hosted, open-source, requires setup
+
+### 💡 Recommendations by Use Case
+
+| Use Case | Recommendation |
+|----------|----------------|
+| **Development/Testing** | Current free API (wait 24h if rate-limited, or use VPN) |
+| **Low Volume (<10 PDFs/day)** | Current free API (acceptable with caching) |
+| **Medium Volume (10-100 PDFs/day)** | Google Cloud Translation API |
+| **High Volume (100+ PDFs/day)** | **Must use** paid API service |
+| **Production/Business** | **Must use** paid API (reliability is critical) |
+
+### ⏱️ Processing Time Impact
+
+With free API (15-second delays between requests):
+- Small PDF (10 pages): ~5 minutes
+- Medium PDF (50 pages): ~25 minutes
+- Large PDF (100 pages): ~50 minutes
+
+With paid API (no delays):
+- Any PDF: ~1-2 minutes (regardless of size)
+
+---
+
 ## 🤔 Assumptions
 
 ### PDF Format
@@ -424,11 +509,11 @@ NEXT_PUBLIC_API_URL=http://localhost:5001
 - Document numbers: `123/2023` format
 - Dates: `DD-Mon-YYYY` format
 
-### Translation
-- Google Translate free tier with rate limits
-- Caching reduces repeated API calls
-- English names extracted from translated text
-- Fallback to Tamil if English extraction fails
+### Data Extraction
+- English names extracted from translated text first
+- Falls back to mixed English/Tamil extraction
+- Falls back to Tamil if all else fails
+- Numbers and dates work without translation
 
 ### Authentication
 - Stub authentication with hardcoded credentials

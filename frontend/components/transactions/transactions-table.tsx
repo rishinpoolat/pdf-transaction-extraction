@@ -14,11 +14,13 @@ export function TransactionsTable({
 }: TransactionsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "document" | "none">("none");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
   // Client-side filtering
-  const filteredTransactions = transactions.filter((txn) => {
+  let filteredTransactions = transactions.filter((txn) => {
     const matchesSearch =
       searchTerm === "" ||
       txn.buyerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -39,6 +41,28 @@ export function TransactionsTable({
 
     return matchesSearch && matchesFilter;
   });
+
+  // Apply sorting
+  if (sortBy === "date") {
+    filteredTransactions = [...filteredTransactions].sort((a, b) => {
+      const dateA = a.executionDate || a.registrationDate || "";
+      const dateB = b.executionDate || b.registrationDate || "";
+
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      const comparison = new Date(dateA).getTime() - new Date(dateB).getTime();
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  } else if (sortBy === "document") {
+    filteredTransactions = [...filteredTransactions].sort((a, b) => {
+      const docA = `${a.documentNumber || ""}/${a.documentYear || ""}`;
+      const docB = `${b.documentNumber || ""}/${b.documentYear || ""}`;
+      const comparison = docA.localeCompare(docB);
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -73,7 +97,7 @@ export function TransactionsTable({
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
           />
         </div>
-        <div>
+        <div className="flex gap-2">
           <select
             value={filterType}
             onChange={(e) => handleFilterChange(e.target.value)}
@@ -84,6 +108,29 @@ export function TransactionsTable({
             <option value="mortgage">Mortgage</option>
             <option value="gift">Gift Deed</option>
           </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value as "date" | "document" | "none");
+              setCurrentPage(1);
+            }}
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+          >
+            <option value="none">No Sorting</option>
+            <option value="date">Sort by Date</option>
+            <option value="document">Sort by Document #</option>
+          </select>
+
+          {sortBy !== "none" && (
+            <button
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-black"
+              title={sortOrder === "asc" ? "Ascending" : "Descending"}
+            >
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </button>
+          )}
         </div>
       </div>
 

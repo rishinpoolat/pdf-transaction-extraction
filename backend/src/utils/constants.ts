@@ -12,8 +12,4 @@ export const errorMessages = {
 export const successMessages = {
   SIGN_IN: 'Signed in successfully',
   LOG_OUT: 'Logged out successfully',
-  OTP_SENT: 'OTP sent successfully',
-  OTP_VERIFIED: 'OTP verified successfully',
-  PASSWORD_RESET: 'Password reset successfully',
-  RESET_LINK_SENT: 'Password reset link sent successfully',
 } as const;

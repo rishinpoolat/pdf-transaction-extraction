@@ -22,13 +22,13 @@ const TRANSLATION_CONFIG = {
   maxChunkSize: 5000, // Google Translate character limit
   cacheExpiry: 60 * 60 * 24 * 30, // 30 days in seconds (longer cache)
   rateLimit: {
-    maxRequests: 10, // 10 requests per minute
+    maxRequests: 5, // Conservative: 5 requests per minute
     perSeconds: 60, // Per minute
   },
-  delayBetweenRequests: 5000, // 5 seconds between requests (reasonable pace)
+  delayBetweenRequests: 15000, // 15 seconds between requests (very conservative to avoid rate limiting)
   maxRetries: 3, // Only try 3 times, then skip to avoid blocking
-  initialBackoff: 60000, // 1 minute wait on rate limit
-  backoffMultiplier: 2, // 1min, 2min, 4min
+  initialBackoff: 120000, // 2 minutes wait on rate limit
+  backoffMultiplier: 2, // 2min, 4min, 8min
 };
 
 // Rate limiting using Redis
@@ -53,6 +53,26 @@ class RateLimiter {
 }
 
 const rateLimiter = new RateLimiter();
+
+// Track last translation API call timestamp globally
+let lastTranslationTime = 0;
+
+/**
+ * Ensure minimum delay since last actual API call (not cached)
+ */
+async function enforceGlobalDelay(): Promise<void> {
+  const now = Date.now();
+  const timeSinceLastCall = now - lastTranslationTime;
+  const requiredDelay = TRANSLATION_CONFIG.delayBetweenRequests;
+
+  if (timeSinceLastCall < requiredDelay) {
+    const waitTime = requiredDelay - timeSinceLastCall;
+    console.log(`⏱️ Waiting ${Math.ceil(waitTime / 1000)}s before next translation API call...`);
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
+  }
+
+  lastTranslationTime = Date.now();
+}
 
 /**
  * Generate cache key for translation
@@ -118,8 +138,8 @@ async function translateChunk(text: string): Promise<string> {
   // Wait for rate limit slot
   await rateLimiter.waitForSlot();
 
-  // Add delay between requests to avoid rate limiting
-  await new Promise((resolve) => setTimeout(resolve, TRANSLATION_CONFIG.delayBetweenRequests));
+  // Enforce global minimum delay between API calls
+  await enforceGlobalDelay();
 
   // Attempt translation with retries
   for (let attempt = 1; attempt <= TRANSLATION_CONFIG.maxRetries; attempt++) {

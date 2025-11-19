@@ -194,6 +194,31 @@ function cleanToEnglishOnly(text: string): string {
 }
 
 /**
+ * Extract English words from mixed English/Tamil text
+ * Useful for fields that might have English names embedded in Tamil text
+ */
+function extractEnglishFromMixed(text: string): string | undefined {
+  // Remove Tamil Unicode characters (U+0B80 to U+0BFF)
+  let cleaned = text.replace(/[\u0B80-\u0BFF]/g, ' ');
+
+  // Keep only: English letters, numbers, common punctuation, spaces
+  cleaned = cleaned.replace(/[^a-zA-Z0-9,.\-\s()]/g, ' ');
+
+  // Clean up multiple spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  // Remove standalone single characters and numbers
+  cleaned = cleaned.split(/\s+/).filter(word => word.length > 1).join(' ');
+
+  // If result is too short or empty, return undefined
+  if (!cleaned || cleaned.length < 3) {
+    return undefined;
+  }
+
+  return cleaned;
+}
+
+/**
  * Extract plot number
  */
 function extractPlotNumber(text: string): string | undefined {
@@ -208,7 +233,7 @@ function extractPlotNumber(text: string): string | undefined {
 }
 
 /**
- * Extract village name - tries English first, then Tamil
+ * Extract village name - tries English first, then mixed text, then Tamil
  */
 function extractVillage(text: string, translatedText?: string): string | undefined {
   // Try to extract from English translated text first
@@ -222,16 +247,24 @@ function extractVillage(text: string, translatedText?: string): string | undefin
     }
   }
 
-  // Fallback: Village /கிராமம் :Thiruvennainallur
-  const villageMatch = text.match(/Village\s*\/கிராமம்\s*:([^\s]+)/);
+  // Try direct English extraction: Village /கிராமம் :Thiruvennainallur
+  const villageMatch = text.match(/Village\s*\/கிராமம்\s*:([^\n]+)/);
   if (villageMatch) {
-    return villageMatch[1].trim();
+    const raw = villageMatch[1].trim();
+    // Try to extract English words from mixed content
+    const english = extractEnglishFromMixed(raw);
+    if (english) {
+      return english;
+    }
+    return raw;
   }
 
   // Alternative: Village & Street pattern
   const altMatch = text.match(/Village & Street\/கிராமம் மற்\s*றும் ெதரு:\s*([^,\n]+)/);
   if (altMatch) {
-    return altMatch[1].trim();
+    const raw = altMatch[1].trim();
+    const english = extractEnglishFromMixed(raw);
+    return english || raw;
   }
 
   return undefined;
