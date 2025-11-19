@@ -61,21 +61,21 @@ export const verifySession = cache(async (): Promise<{ isAuth: boolean; accessTo
 export async function setAuthCookies(tokens: AuthTokens): Promise<void> {
   const cookieStore = await cookies();
 
-  // Set access token (expires in 15 minutes)
+  // Set access token (expires in 24 hours)
   cookieStore.set("accessToken", tokens.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 15, // 15 minutes
+    maxAge: 60 * 60 * 24, // 24 hours
     path: "/",
   });
 
-  // Set refresh token (expires in 7 days)
+  // Set refresh token (expires in 30 days)
   cookieStore.set("refreshToken", tokens.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 30, // 30 days
     path: "/",
   });
 }
@@ -126,7 +126,7 @@ export async function refreshAccessToken(): Promise<string | null> {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 60 * 15, // 15 minutes
+        maxAge: 60 * 60 * 24, // 24 hours
         path: "/",
       });
 

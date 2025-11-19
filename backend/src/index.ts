@@ -11,9 +11,12 @@ import { testConnection, closeConnection } from './db';
 import routes from './routes';
 import { CustomError, errorHandler, httpErrorCodes } from './utils/error';
 import { startCleanupJob } from './services/cleanup.service';
+import { startPdfProcessingWorker } from './workers/pdf-processor.worker';
+import { closeQueues } from './config/queue.config';
+import redisClient from './config/redis.config';
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'SECRET', 'PORT'];
+const requiredEnvVars = ['DATABASE_URL', 'SECRET', 'PORT', 'REDIS_HOST', 'REDIS_PORT'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     console.error(`Error: ${envVar} environment variable is not set`);
@@ -102,6 +105,10 @@ async function startServer() {
     // Start token cleanup job
     startCleanupJob();
 
+    // Start PDF processing worker
+    const worker = startPdfProcessingWorker();
+    console.log('✅ PDF processing worker initialized');
+
     // Start Express server
     app.listen(PORT, () => {
       console.log(`
@@ -112,9 +119,14 @@ async function startServer() {
 ║   Port: ${PORT}                             ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}               ║
 ║   URL: http://localhost:${PORT}             ║
+║   Redis: Connected ✓                       ║
+║   Worker: Active ✓                         ║
 ╚════════════════════════════════════════════╝
       `);
     });
+
+    // Store worker reference for graceful shutdown
+    (global as any).pdfWorker = worker;
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
@@ -124,12 +136,20 @@ async function startServer() {
 // Graceful shutdown handlers
 process.on('SIGTERM', async () => {
   console.log('\nSIGTERM received. Shutting down gracefully...');
+  const worker = (global as any).pdfWorker;
+  if (worker) await worker.close();
+  await closeQueues();
+  await redisClient.quit();
   await closeConnection();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('\nSIGINT received. Shutting down gracefully...');
+  const worker = (global as any).pdfWorker;
+  if (worker) await worker.close();
+  await closeQueues();
+  await redisClient.quit();
   await closeConnection();
   process.exit(0);
 });

@@ -27,8 +27,15 @@ export const isAuthenticated = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Try to get token from Authorization header first
     const authToken = req.get('Authorization');
-    const token = authToken?.split('Bearer ')[1];
+    let token = authToken?.split('Bearer ')[1];
+
+    // For SSE connections, EventSource can't send custom headers,
+    // so we also check query parameters
+    if (!token && req.query.token) {
+      token = req.query.token as string;
+    }
 
     if (!token) {
       return next(
