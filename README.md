@@ -17,7 +17,7 @@ A full-stack application for extracting, translating, and managing Tamil propert
 ```bash
 # 1. Clone repository
 git clone <repository-url>
-cd nirnai
+cd <repository-directory>
 
 # 2. Start Docker containers (PostgreSQL + Redis)
 docker-compose up -d
@@ -46,7 +46,7 @@ npm run dev
 
 **Login Credentials:**
 
-- Email: `admin@nirnai.com`
+- Email: `admin@example.com`
 - Password: `admin123`
 
 ---
@@ -428,7 +428,7 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@nirnai.com",
+  "email": "admin@example.com",
   "password": "admin123"
 }
 
@@ -439,7 +439,7 @@ Response:
     "accessToken": "eyJhbGc...",
     "user": {
       "id": 1,
-      "email": "admin@nirnai.com",
+      "email": "admin@example.com",
       "name": "Admin"
     }
   }
@@ -458,7 +458,7 @@ Response:
   "data": {
     "id": 1,
     "name": "Admin",
-    "email": "admin@nirnai.com"
+    "email": "admin@example.com"
   }
 }
 ```

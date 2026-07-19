@@ -46,7 +46,7 @@ Server will start at: `http://localhost:5001`
 
 ```json
 {
-  "email": "admin@nirnai.com",
+  "email": "admin@example.com",
   "password": "admin123"
 }
 ```
@@ -62,7 +62,7 @@ Server will start at: `http://localhost:5001`
     "accessToken": "eyJhbGc...",
     "user": {
       "id": 1,
-      "email": "admin@nirnai.com",
+      "email": "admin@example.com",
       "name": "Admin"
     }
   }
@@ -146,7 +146,7 @@ Server will start at: `http://localhost:5001`
   "data": {
     "id": 1,
     "name": "Admin",
-    "email": "admin@nirnai.com"
+    "email": "admin@example.com"
   }
 }
 ```
@@ -193,7 +193,7 @@ Server will start at: `http://localhost:5001`
 curl -X POST http://localhost:5001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@nirnai.com",
+    "email": "admin@example.com",
     "password": "admin123"
   }'
 ```
@@ -235,7 +235,7 @@ docker-compose down  # Stop PostgreSQL
 - Token may have expired
 - Login again to get new token
 - Check `Authorization: Bearer <token>` header format
-- Ensure using correct credentials: `admin@nirnai.com` / `admin123`
+- Ensure using correct credentials: `admin@example.com` / `admin123`
 
 ### Database connection failed?
 

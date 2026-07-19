@@ -1,5 +1,5 @@
 {
-  "name": "nirnai-backend",
+  "name": "backend",
   "version": "1.0.0",
   "description": "PDF Transaction Extraction API",
   "main": "dist/index.js",

@@ -6,7 +6,7 @@ import { loginSchema, refreshTokenSchema } from '../validators/auth.validator';
 
 // Hardcoded credentials
 const HARDCODED_USER = {
-  email: 'admin@nirnai.com',
+  email: 'admin@example.com',
   password: 'admin123',
   name: 'Administrator',
   id: 1,
