@@ -1,4 +1,4 @@
-# Nirnai - Tamil Property Transaction Extraction System
+# Tamil Property Transaction Extraction System
 
 A full-stack application for extracting, translating, and managing Tamil property transaction data from PDF documents. The system automatically parses Tamil Encumbrance Certificate PDFs, translates the content to English, extracts structured transaction data, and provides a user-friendly interface for searching and viewing transactions.
 
